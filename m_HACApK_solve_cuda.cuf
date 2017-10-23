@@ -1,0 +1,2070 @@
+module m_HACApK_solve_cuda
+  use cudafor
+  implicit none
+
+contains
+  
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low0                 &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,            &
+    nd,nlf,n_low,la1,la2,la3)
+    integer*4, dimension(nlf) :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(nlf) :: idxp1,idxp2,idxp3
+    real*8,    dimension(nd)  :: zau,zu
+    real*8,    dimension(la1) :: a1
+    real*8,    dimension(la2) :: a2
+    real*8,    dimension(la3) :: a3
+    integer*4,value :: nd,nlf,n_low,la1,la2,la3
+    integer*4 :: ii,tx,ilil,il,ill,it,itt,ndl,ndt,ns,nstrtl,nstrtt,idx1,idx2,kt
+    real*8 :: zbutt,zautt
+    integer*4 :: istat
+    real*8, dimension(32) :: zbuttt
+!    real*8, shared :: tmp(1) ! blocksize should be (64,1,1)
+ 
+    ii = blockIdx%x
+    tx = threadIdx%x
+
+    ndl   =ndlp(ii)   ; ndt   =ndtp(ii)   ; ns=ndl*ndt
+    nstrtl=nstrtlp(ii); nstrtt=nstrttp(ii)
+    idx1 = idxp1(ii)  ; idx2 = idxp2(ii)
+    kt=ktp(ii)
+
+    do il=1,kt
+       zbutt = 0.0d0
+       do it=tx,ndt,32
+          itt=it+nstrtt-1
+          zbutt=zbutt+a1(it+(il-1)*ndt+idx1-1)*zu(itt)
+       enddo
+       zbutt = zbutt + __shfl_xor(zbutt,16)
+       zbutt = zbutt + __shfl_xor(zbutt,8)
+       zbutt = zbutt + __shfl_xor(zbutt,4)
+       zbutt = zbutt + __shfl_xor(zbutt,2)
+       zbutt = zbutt + __shfl_xor(zbutt,1)
+       do it=tx,ndl,32
+          ill=it+nstrtl-1
+          zautt=a2(it+(il-1)*ndl+idx2-1)*zbutt
+          istat = atomicadd(zau(ill),zautt)
+       enddo
+    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low0
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low0_2               &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,            &
+    nd,nlf,n_low,la1,la2,la3)
+    integer*4, dimension(nlf) :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(nlf) :: idxp1,idxp2,idxp3
+    real*8,    dimension(nd)  :: zau,zu
+    real*8,    dimension(la1) :: a1
+    real*8,    dimension(la2) :: a2
+    real*8,    dimension(la3) :: a3
+    integer*4,value :: nd,nlf,n_low,la1,la2,la3
+    integer*4 :: ii,tx,ty,bydim,ilil,il,ill,it,itt,ndl,ndt,ns,nstrtl,nstrtt,idx1,idx2,kt
+    real*8 :: zbutt,zautt
+    integer*4 :: istat
+!    real*8, shared :: tmp(1) ! blocksize should be (64,1,1)
+ 
+    ii = blockIdx%x
+    tx = threadIdx%x
+    bydim = blockDim%y
+    ty = threadIdx%y
+
+    ndl   =ndlp(ii)   ; ndt   =ndtp(ii)   ; ns=ndl*ndt
+    nstrtl=nstrtlp(ii); nstrtt=nstrttp(ii)
+    idx1 = idxp1(ii)  ; idx2 = idxp2(ii)
+    kt=ktp(ii)
+
+    do il=ty,kt,bydim
+       zbutt = 0.0d0
+       do it=tx,ndt,32
+          itt=it+nstrtt-1
+          zbutt=zbutt+a1(it+(il-1)*ndt+idx1-1)*zu(itt)
+       enddo
+       zbutt = zbutt + __shfl_xor(zbutt,16)
+       zbutt = zbutt + __shfl_xor(zbutt,8)
+       zbutt = zbutt + __shfl_xor(zbutt,4)
+       zbutt = zbutt + __shfl_xor(zbutt,2)
+       zbutt = zbutt + __shfl_xor(zbutt,1)
+       do it=tx,ndl,32
+          ill=it+nstrtl-1
+          zautt=a2(it+(il-1)*ndl+idx2-1)*zbutt
+          istat = atomicadd(zau(ill),zautt)
+       enddo
+    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low0_2
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low0_3               &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,            &
+    nd,nlf,n_low,la1,la2,la3)
+#if 0
+    integer*4, dimension(nlf),intent(in) :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(nlf),intent(in) :: idxp1,idxp2,idxp3
+    real*8,    dimension(nd),intent(in)  :: zu
+    real*8,    dimension(nd),intent(inout)  :: zau
+    real*8,    dimension(la1) :: a1
+    real*8,    dimension(la2) :: a2
+    real*8,    dimension(la3) :: a3
+    integer*4,value,intent(in) :: nd,nlf,n_low,la1,la2,la3
+#else
+    integer*4, dimension(nlf) :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(nlf) :: idxp1,idxp2,idxp3
+    real*8,    dimension(nd) :: zu
+    real*8,    dimension(nd) :: zau
+    real*8,    dimension(la1) :: a1
+    real*8,    dimension(la2) :: a2
+    real*8,    dimension(la3) :: a3
+    integer*4,value,intent(in) :: nd,nlf,n_low,la1,la2,la3
+#endif
+    integer*4 :: ii,tx,ty,bydim,ilil,il,ill,it,itt,ndl,ndt,ns,nstrtl,nstrtt,idx1,idx2,kt,txx
+    real*8 :: zbutt,zautt
+    integer*4 :: istat
+    real*8, shared :: tmp(64) ! blocksize should be (64,1,1)
+ 
+    ii = blockIdx%x
+    tx = threadIdx%x
+    txx = mod(tx+31,64)+1
+    bydim = blockDim%y
+    ty = threadIdx%y
+
+    ndl   =ndlp(ii)   ; ndt   =ndtp(ii)   ; ns=ndl*ndt
+    nstrtl=nstrtlp(ii); nstrtt=nstrttp(ii)
+    idx1 = idxp1(ii)  ; idx2 = idxp2(ii)
+    kt=ktp(ii)
+
+    do il=ty,kt,bydim
+       zbutt = 0.0d0
+       do it=tx,ndt,64
+          itt=it+nstrtt-1
+          zbutt=zbutt+a1(it+(il-1)*ndt+idx1-1)*zu(itt)
+       enddo
+       zbutt = zbutt + __shfl_xor(zbutt,16)
+       zbutt = zbutt + __shfl_xor(zbutt,8)
+       zbutt = zbutt + __shfl_xor(zbutt,4)
+       zbutt = zbutt + __shfl_xor(zbutt,2)
+       zbutt = zbutt + __shfl_xor(zbutt,1)
+       call syncthreads()
+       tmp(tx) = zbutt
+       call syncthreads()
+       zbutt = zbutt + tmp(txx)
+       do it=tx,ndl,64
+          ill=it+nstrtl-1
+          zautt=a2(it+(il-1)*ndl+idx2-1)*zbutt
+          istat = atomicadd(zau(ill),zautt)
+       enddo
+    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low0_3
+
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low7             &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,idxp1,idxp2,            &
+    nd,nlf,n_low,la1,la2,kmax)
+    integer*4, dimension(nlf), intent(in) :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+!    integer*4, dimension(kmax,n_low),intent(in) :: idxp1,idxp2
+    integer*4, dimension(n_low,kmax),intent(in) :: idxp1,idxp2
+    real*8,    dimension(nd),intent(inout)  :: zau,zu
+    real*8,    dimension(la1) :: a1
+    real*8,    dimension(la2) :: a2
+    integer*4,value,intent(in) :: nd,nlf,n_low,la1,la2,kmax
+    integer*4 :: ii,tx,ilil,il,ill,it,itt,ndl,ndt,ns,nstrtl,nstrtt,idx1,idx2,kt,txx
+    real*8 :: zbutt,zautt
+    integer*4 :: istat
+    real*8, shared :: tmp(64) ! blocksize should be (64,1,1)
+ 
+    ii = blockIdx%x
+    tx = threadIdx%x
+    txx = mod(tx+31,64)+1
+
+    ndl   =ndlp(ii)   ; ndt   =ndtp(ii)   ; ns=ndl*ndt
+    nstrtl=nstrtlp(ii); nstrtt=nstrttp(ii)
+    kt=ktp(ii)
+
+    do il=1,kt
+!       idx1 = idxp1(il,ii)  ; idx2 = idxp2(il,ii)
+       idx1 = idxp1(ii,il)  ; idx2 = idxp2(ii,il)
+!       if(tx==1 .and. ii == 2) print *, il,ii,idx1,idx2
+       zbutt = 0.0d0
+       do it=tx,ndt,64
+          itt=it+nstrtt-1
+          zbutt=zbutt+a1(it+idx1-1)*zu(itt)
+       enddo
+       zbutt = zbutt + __shfl_xor(zbutt,16)
+       zbutt = zbutt + __shfl_xor(zbutt,8)
+       zbutt = zbutt + __shfl_xor(zbutt,4)
+       zbutt = zbutt + __shfl_xor(zbutt,2)
+       zbutt = zbutt + __shfl_xor(zbutt,1)
+       call syncthreads()
+       tmp(tx) = zbutt
+       call syncthreads()
+       zbutt = zbutt + tmp(txx)
+       ! if(tx == 1 .and. ii == 1) then
+       !    print *, ii,il,zbutt
+       ! end if
+       do it=tx,ndl,64
+          ill=it+nstrtl-1
+          zautt=a2(it+idx2-1)*zbutt
+          istat = atomicadd(zau(ill),zautt)
+       enddo
+    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low7
+
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low_balanced_col         &
+    (zbu_tmp,zu,subid,ndtp,nstrttp,ktp,a1,idxp1,kt_prefix,nd,nlf,n_low,la1,kmax,sublen,lenkt)
+    real*8,    dimension(lenkt)     ,intent(inout) :: zbu_tmp
+    real*8,    dimension(nd)        ,intent(in)  :: zu
+    integer*4, dimension(nlf)       ,intent(in)  :: ndtp,nstrttp,ktp
+    integer*4, dimension(kmax,n_low),intent(in)  :: idxp1
+!    integer*4, dimension(n_low,kmax),intent(in)  :: idxp1
+    integer*4, dimension(sublen,2)  ,intent(in)  :: subid
+    integer*4, dimension(n_low)     ,intent(in)  :: kt_prefix
+    real*8,    dimension(la1)  :: a1
+    integer*4,value,intent(in) :: nd,nlf,n_low,la1,kmax,sublen,lenkt
+!    integer*4 :: ii,jj,tx,txx,ilil,il,ill,it,itt,ndl,ndt,ns,nstrtl,nstrtt,idx1,idx2,kt
+    integer*4 :: ii,jj,tx,txx,it,il,itt,ndt,nstrtt,idx1,kt,ktpre
+    real*8    :: zbutt,zut
+    integer*4 :: istat
+    ! real*8, shared :: tmp(1) ! blocksize should be (64,1,1)
+ 
+    ii = subid(blockIdx%x,1)
+    jj = subid(blockIdx%x,2)
+    tx = threadIdx%x
+    txx= mod(tx+31,32)+1
+    it = blockDim%x * (jj-1) + tx
+    ndt   =ndtp(ii)
+    zbutt = 0.0d0
+    ! if(tx == 1) tmp(1) = 0.0d0
+    if(it > ndt) return
+    ! if(blockIdx%x == 1) then 
+    !    print *, tx, ii, jj
+    !    print *, tx, txx,it,ndt
+    ! end if
+    
+    nstrtt=nstrttp(ii)
+    itt   =it+nstrtt-1
+    zut   =zu(itt)
+    kt    =ktp(ii)
+    ktpre =kt_prefix(ii)-1
+
+    do il=1,kt
+       idx1  = idxp1(il,ii)
+!       idx1  = idxp1(ii,il)
+       zbutt = a1(it+idx1-1)*zut
+       zbutt = zbutt + __shfl_xor(zbutt,16)
+       zbutt = zbutt + __shfl_xor(zbutt,8)
+       zbutt = zbutt + __shfl_xor(zbutt,4)
+       zbutt = zbutt + __shfl_xor(zbutt,2)
+       zbutt = zbutt + __shfl_xor(zbutt,1)
+       if(txx == 1) then 
+          istat = atomicadd(zbu_tmp(ktpre+il),zbutt)
+!          zbu_tmp(ktpre+il) = zbutt
+       endif
+       ! call syncthreads()
+       ! if(tx == 33) tmp(1) = zbutt
+       ! call syncthreads()
+       ! if(tx == 1)  then 
+       !    zbutt = zbutt + tmp(1)
+       !    istat = atomicadd(zbu_tmp(ktpre+il),zbutt)
+       ! endif
+    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low_balanced_col
+
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low_balanced_col2         &
+    (zbu_tmp,zu,subid,ndtp,nstrttp,ktp,a1,idxp1,kt_prefix,nd,nlf,n_low,la1,kmax,sublen,lenkt)
+    real*8,    dimension(lenkt)     ,intent(inout) :: zbu_tmp
+    real*8,    dimension(nd)        ,intent(in)  :: zu
+    integer*4, dimension(nlf)       ,intent(in)  :: ndtp,nstrttp,ktp
+    integer*4, dimension(kmax,n_low),intent(in)  :: idxp1
+!    integer*4, dimension(n_low,kmax),intent(in)  :: idxp1
+    integer*4, dimension(sublen,2)  ,intent(in)  :: subid
+    integer*4, dimension(n_low)     ,intent(in)  :: kt_prefix
+    real*8,    dimension(la1)  :: a1
+    integer*4,value,intent(in) :: nd,nlf,n_low,la1,kmax,sublen,lenkt
+!    integer*4 :: ii,jj,tx,txx,ilil,il,ill,it,itt,ndl,ndt,ns,nstrtl,nstrtt,idx1,idx2,kt
+    integer*4 :: ii,jj,tx,txx,it,il,itt,ndt,nstrtt,idx1,kt,ktpre,ty,dimy,dimx
+    real*8    :: zbutt,zut1,zut2
+    integer*4 :: istat
+    logical   :: flag
+!    real*8, shared :: tmp(1) ! blocksize should be (64,1,1)
+ 
+    ii = subid(blockIdx%x,1)
+    jj = subid(blockIdx%x,2)
+    tx = threadIdx%x
+    ty = threadIdx%y
+    dimx = blockDim%x
+    dimy = blockDim%y
+    txx= mod(tx+31,32)+1
+!    it = blockDim%x * (jj-1) + tx
+    it = dimx * (jj-1) + tx
+    ndt   =ndtp(ii)
+    zbutt = 0.0d0
+!    if(tx == 1) tmp(1) = 0.0d0
+    if(it > ndt) return
+    ! flag = .false.
+    ! if(it+32 > ndt) flag = .true.
+
+    ! if(blockIdx%x == 1) then 
+    !    print *, tx, ii, jj
+    !    print *, tx, txx,it,ndt
+    ! end if
+    
+    nstrtt=nstrttp(ii)
+    itt   =it+nstrtt-1
+    zut1  =zu(itt)
+!    if(flag) zut2 =zu(itt+32)
+    kt    =ktp(ii)
+    ktpre =kt_prefix(ii)-1
+
+    do il=ty,kt,dimy
+!    do il=1,kt
+       idx1  = idxp1(il,ii)
+       !       idx1  = idxp1(ii,il)
+       ! if(flag) then
+          zbutt = a1(it+idx1-1)*zut1
+       ! else
+       !    zbutt = a1(it+idx1-1)*zut1 + a1(it+32+idx1-1)*zut2  
+       ! endif
+
+       zbutt = zbutt + __shfl_xor(zbutt,16)
+       zbutt = zbutt + __shfl_xor(zbutt,8)
+       zbutt = zbutt + __shfl_xor(zbutt,4)
+       zbutt = zbutt + __shfl_xor(zbutt,2)
+       zbutt = zbutt + __shfl_xor(zbutt,1)
+
+       if(txx == 1) then 
+          istat = atomicadd(zbu_tmp(ktpre+il),zbutt)
+!          zbu_tmp(ktpre+il) = zbutt
+       endif
+
+       ! call syncthreads()
+       ! if(tx == 33) tmp(1) = zbutt
+       ! call syncthreads()
+       ! if(tx == 1)  then 
+       !    zbutt = zbutt + tmp(1)
+       !    istat = atomicadd(zbu_tmp(ktpre+il),zbutt)
+       ! endif
+    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low_balanced_col2
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low_balanced_col3         &
+    (zbu_tmp,zu,subid,ndtp,nstrttp,ktp,a1,idxp1,kt_prefix,nd,nlf,n_low,la1,kmax,sublen,lenkt)
+    real*8,    dimension(lenkt)     ,intent(inout) :: zbu_tmp
+    real*8,    dimension(nd)        ,intent(in)  :: zu
+    integer*4, dimension(nlf)       ,intent(in)  :: ndtp,nstrttp,ktp
+    integer*4, dimension(kmax,n_low),intent(in)  :: idxp1
+    integer*4, dimension(sublen,2)  ,intent(in)  :: subid
+    integer*4, dimension(n_low)     ,intent(in)  :: kt_prefix
+    real*8,    dimension(la1)  :: a1
+    integer*4,value,intent(in) :: nd,nlf,n_low,la1,kmax,sublen,lenkt
+    integer*4 :: ii,jj,tx,txx,it,il,itt,ill,ndt,nstrtt,idx1,kt,ktpre,ty,dimy,dimx,bid
+    real*8    :: zbutt,zut1,zbuttt
+    integer*4 :: istat
+    logical   :: flag
+!    real*8, shared :: tmp(1) ! blocksize should be (64,1,1)
+ 
+    bid = blockIdx%x
+    ii = subid(bid,1)
+    jj = subid(bid,2)
+    tx = threadIdx%x
+    txx= mod(tx-1,32)+1
+    dimx = blockDim%x
+    it = dimx * (jj-1) + tx
+    ndt   =ndtp(ii)
+    zbutt = 0.0d0
+    zbuttt = 0.0d0
+
+!    if(it > ndt) return
+
+    nstrtt=nstrttp(ii)
+    itt   =it+nstrtt-1
+    zut1  =zu(itt)
+    kt    =ktp(ii)
+    ktpre =kt_prefix(ii)-1
+
+    do ill=1,kt,32
+       ! if(bid == 172951 .and. tx == 1) print *, kt, ill, bid
+       do il=ill,min(kt,ill+31)
+          idx1  = idxp1(il,ii)
+          if(it <= ndt) then
+             zbutt = a1(it+idx1-1)*zut1
+          else
+             zbutt = 0.0d0
+          end if
+          
+          zbutt = zbutt + __shfl_xor(zbutt,16)
+          zbutt = zbutt + __shfl_xor(zbutt,8)
+          zbutt = zbutt + __shfl_xor(zbutt,4)
+          zbutt = zbutt + __shfl_xor(zbutt,2)
+          zbutt = zbutt + __shfl_xor(zbutt,1)
+          
+          if(mod(il-1,32)+1 == txx) then
+             zbuttt = zbutt
+             ! if(bid == 172951) then
+             !    print *, tx, zbutt, il, txx
+             ! end if
+          endif
+       enddo
+       if(txx <= mod(il-1-1,32)+1) then
+          ! if(bid == 172951) then
+          !    print *, tx, zbuttt, il, txx, ill+txx-1
+          ! end if
+          istat = atomicadd(zbu_tmp(ktpre+ill+txx-1),zbuttt)
+       endif
+    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low_balanced_col3
+
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low_balanced_row             &
+    (zau,zbu_tmp,subid,ndlp,nstrtlp,ktp,a2,idxp2,kt_prefix,nd,nlf,n_low,la2,kmax,sublen,lenkt)
+    real*8,    dimension(nd)        ,intent(out) :: zau
+    real*8,    dimension(lenkt)     ,intent(in)  :: zbu_tmp
+    integer*4, dimension(nlf)       ,intent(in)  :: ndlp,nstrtlp,ktp
+    integer*4, dimension(kmax,n_low),intent(in)  :: idxp2
+!    integer*4, dimension(n_low,kmax),intent(in)  :: idxp2
+    integer*4, dimension(sublen,2)  ,intent(in)  :: subid
+    integer*4, dimension(n_low)     ,intent(in)  :: kt_prefix
+    real*8,    dimension(la2)  :: a2
+    integer*4,value,intent(in) :: nd,nlf,n_low,la2,kmax,sublen,lenkt
+
+    integer*4 :: ii,jj,tx,it,ndl,il,ill,nstrtl,idx2,kt,ktpre
+    real*8    :: zautt
+    integer*4 :: istat
+!    real*8, shared :: tmp(64) ! blocksize should be (64,1,1)
+ 
+    ii = subid(blockIdx%x,1)
+    jj = subid(blockIdx%x,2)
+    tx = threadIdx%x
+!    txx= mod(tx+31,64)+1
+    it = blockDim%x * (jj-1) + tx
+    ndl= ndlp(ii)
+    if(it > ndl) return
+
+    zautt = 0.0d0
+    
+    nstrtl=nstrtlp(ii)
+    ill   =it+nstrtl-1
+    kt    =ktp(ii)
+    ktpre =kt_prefix(ii)-1
+
+    do il=1,kt
+       idx2 = idxp2(il,ii)
+!       idx2 = idxp2(ii,il)
+       zautt= zautt+a2(it+idx2-1)*zbu_tmp(ktpre+il)
+    enddo
+    istat = atomicadd(zau(ill),zautt)
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low_balanced_row
+
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_dense_balanced        &
+    (zau,zu,subid,ndtp,nstrttp,ndlp,nstrtlp,a3,idxp3,nd,nlf,n_low,la3,sublen)
+    real*8,    dimension(nd)       ,intent(inout) :: zau
+    real*8,    dimension(nd)       ,intent(in)  :: zu
+    integer*4, dimension(nlf)      ,intent(in)  :: ndtp,nstrttp,ndlp,nstrtlp
+    integer*4, dimension(nlf)      ,intent(in)  :: idxp3
+    integer*4, dimension(sublen,2) ,intent(in)  :: subid
+    real*8,    dimension(la3)  :: a3
+    integer*4,value,intent(in) :: nd,nlf,n_low,la3,sublen
+    integer*4 :: ii,jj,tx,txx,it,il,itt,ill,ndt,nstrtt,ndl,nstrtl,idx3,ty,dimy,dimx,bid
+    real*8    :: zbutt,zut1,zut2
+    integer*4 :: istat
+ 
+    bid = blockIdx%x
+    ii = subid(bid,1)
+    jj = subid(bid,2)
+    tx = threadIdx%x
+    ty = threadIdx%y
+    dimx = blockDim%x
+    dimy = blockDim%y
+!    txx= mod(tx+31,32)+1
+    it = dimx * (jj-1) + tx
+    ndt   =ndtp(ii)
+    zbutt = 0.0d0
+    if(it > ndt) return
+    
+    nstrtt=nstrttp(ii)
+    nstrtl=nstrtlp(ii)
+    ndl   =ndlp(ii)
+    itt   =it+nstrtt-1
+    zut1  =zu(itt)
+    idx3  = idxp3(ii)
+
+    ! if(bid < 10) then 
+    !    if(tx==1 .and. ty == 1)  print *, blockIdx%x, ii, jj, idx3, itt
+    ! endif
+
+    do il=ty,ndl,dimy
+       ill   =il+nstrtl-1
+       zbutt = a3(it+(il-1)*ndt+idx3-1)*zut1
+
+       zbutt = zbutt + __shfl_xor(zbutt,16)
+       zbutt = zbutt + __shfl_xor(zbutt,8)
+       zbutt = zbutt + __shfl_xor(zbutt,4)
+       zbutt = zbutt + __shfl_xor(zbutt,2)
+       zbutt = zbutt + __shfl_xor(zbutt,1)
+
+       if(tx == 1) then 
+          istat = atomicadd(zau(ill),zbutt)
+       endif
+
+       ! if(bid < 10) then 
+       !    if(tx==1 .and. ty == 1)  print *, blockIdx%x, zbutt
+       ! endif
+    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_dense_balanced
+
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_dense_balanced_rowmajor        &
+    (zau,zu,subid,ndtp,nstrttp,ndlp,nstrtlp,a3,idxp3,nd,nlf,n_low,n_dense,la3,sublen)
+    real*8,    dimension(nd)     ,intent(inout) :: zau
+    real*8,    dimension(nd)     ,intent(in)  :: zu
+    integer*4, dimension(nlf)    ,intent(in)  :: ndtp,nstrttp,ndlp,nstrtlp
+    integer*4, dimension(nlf)    ,intent(in)  :: idxp3
+    integer*4, dimension(sublen) ,intent(in)  :: subid
+
+    real*8,    dimension(la3)  :: a3
+    integer*4,value,intent(in) :: nd,nlf,n_low,n_dense,la3,sublen
+    integer*4 :: ii,jj,tid,tx,txx,it,il,itt,ill,ndt,nstrtt,ndl,nstrtl,idx3,ty,dimy,dimx,bid,loci
+    real*8    :: zautt
+    integer*4 :: istat
+ 
+    bid = blockIdx%x
+    tx = threadIdx%x
+    tid= blockDim%x * (bid-1) + tx
+    if(tid > sublen) return
+    ii = subid(tid)
+    il = tid - idxp3(ii-n_low) + 1
+
+    zautt = 0.0d0
+    
+    nstrtt=nstrttp(ii)
+    nstrtl=nstrtlp(ii)
+    ill   =il+nstrtl-1
+    ndt   =ndtp(ii)
+
+    do it=1,ndt
+       idx3  = idxp3(ii-n_low+n_dense*(it-1))
+       itt   = it+nstrtt-1
+       zautt = zautt+a3(il+idx3-1)*zu(itt)
+       ! if(ii == n_low+n_dense .and. it > 96) print *, it, il, a3(il+idx3-1)
+    enddo
+    istat = atomicadd(zau(ill),zautt)
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_dense_balanced_rowmajor
+
+
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low                  &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,            &
+    nd,nlf,n_low,la1,la2,la3)
+    integer*4, dimension(nlf) :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(nlf) :: idxp1,idxp2,idxp3
+    real*8,    dimension(nd)  :: zau,zu
+    real*8,    dimension(la1) :: a1
+    real*8,    dimension(la2) :: a2
+    real*8,    dimension(la3) :: a3
+    integer*4,value :: nd,nlf,n_low,la1,la2,la3
+    integer*4 :: ii,tx,ilil,il,ill,it,itt,ndl,ndt,ns,nstrtl,nstrtt,idx1,idx2,kt
+    real*8 :: zbutt,zautt
+    integer*4 :: istat
+    real*8, dimension(32) :: zbuttt
+!    real*8, shared :: tmp(1) ! blocksize should be (64,1,1)
+ 
+    ii = blockIdx%x
+    tx = threadIdx%x
+
+!    do ii=1, n_low
+    ndl   =ndlp(ii)   ; ndt   =ndtp(ii)   ; ns=ndl*ndt
+    nstrtl=nstrtlp(ii); nstrtt=nstrttp(ii)
+    idx1 = idxp1(ii)  ; idx2 = idxp2(ii)
+    kt=ktp(ii)
+
+    do ilil=1,kt,32
+       do il=ilil,min(kt,ilil+31)
+          zbutt = 0.0d0
+          do it=tx,ndt,32
+             itt=it+nstrtt-1
+             zbutt=zbutt+a1(it+(il-1)*ndt+idx1-1)*zu(itt)
+          enddo
+!          call syncthreads()
+          zbutt = zbutt + __shfl_xor(zbutt,16)
+          zbutt = zbutt + __shfl_xor(zbutt,8)
+          zbutt = zbutt + __shfl_xor(zbutt,4)
+          zbutt = zbutt + __shfl_xor(zbutt,2)
+          zbutt = zbutt + __shfl_xor(zbutt,1)
+!          zbutt = __shfl(zbutt,1)
+!          call syncthreads()
+          ! do it=1,ndt
+          !    itt=it+nstrtt-1
+          !    zbutt=zbutt+a1(it+(il-1)*ndt+idx1-1)*zu(itt)
+          ! enddo
+          zbuttt(il-ilil+1) = zbutt
+       enddo
+       do il=ilil,min(kt,ilil+31)
+          do it=tx,ndl,32
+             ill=it+nstrtl-1
+             !zau(ill)=zau(ill)+a2(it+(il-1)*ndl+idx2-1)*zbuttt(il-ilil+1)
+             zautt=a2(it+(il-1)*ndl+idx2-1)*zbuttt(il-ilil+1)
+             istat = atomicadd(zau(ill),zautt)
+          enddo
+          ! do it=1,ndl
+          !    ill=it+nstrtl-1
+          !    !zau(ill)=zau(ill)+a2(it+(il-1)*ndl+idx2-1)*zbuttt(il-ilil+1)
+          !    zautt=a2(it+(il-1)*ndl+idx2-1)*zbuttt(il-ilil+1)
+          !    istat = atomicadd(zau(ill),zautt)
+          ! enddo
+       enddo
+    enddo
+!    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low
+
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low2                 &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,            &
+    nd,nlf,n_low,la1,la2,la3)
+    integer*4, dimension(nlf) :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(nlf) :: idxp1,idxp2,idxp3
+    real*8,    dimension(nd)  :: zau,zu
+    real*8,    dimension(la1) :: a1
+    real*8,    dimension(la2) :: a2
+    real*8,    dimension(la3) :: a3
+    integer*4,value :: nd,nlf,n_low,la1,la2,la3
+    integer*4 :: ii,tx,ilil,il,ill,it,itt,ndl,ndt,ns,nstrtl,nstrtt,idx1,idx2,kt
+    real*8 :: zbutt,zautt
+    integer*4 :: istat
+    real*8, dimension(32) :: zbuttt
+!    real*8, shared :: tmp(1) ! blocksize should be (64,1,1)
+ 
+    ii = blockIdx%x
+    tx = threadIdx%x
+
+    ndl   =ndlp(ii)   ; ndt   =ndtp(ii)   ; ns=ndl*ndt
+    nstrtl=nstrtlp(ii); nstrtt=nstrttp(ii)
+    idx1 = idxp1(ii)  ; idx2 = idxp2(ii)
+    kt=ktp(ii)
+
+    do ilil=1,kt,32
+       do il=ilil,min(kt,ilil+31)
+          zbutt = 0.0d0
+          do it=tx,ndt,32
+             itt=it+nstrtt-1
+             zbutt=zbutt+a1(it+(il-1)*ndt+idx1-1)*zu(itt)
+          enddo
+          zbutt = zbutt + __shfl_xor(zbutt,16)
+          zbutt = zbutt + __shfl_xor(zbutt,8)
+          zbutt = zbutt + __shfl_xor(zbutt,4)
+          zbutt = zbutt + __shfl_xor(zbutt,2)
+          zbutt = zbutt + __shfl_xor(zbutt,1)
+          zbuttt(il-ilil+1) = zbutt
+       enddo
+       do it=tx,ndl,32
+          zautt=0.0d0
+          do il=ilil,min(kt,ilil+31)
+             ill=it+nstrtl-1
+             zautt=zautt+a2(it+(il-1)*ndl+idx2-1)*zbuttt(il-ilil+1)
+          enddo
+          istat = atomicadd(zau(ill),zautt)
+       enddo
+    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low2
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low22                &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,            &
+    nd,nlf,n_low,la1,la2,la3)
+    integer*4, dimension(nlf) :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(nlf) :: idxp1,idxp2,idxp3
+    real*8,    dimension(nd)  :: zau,zu
+    real*8,    dimension(la1) :: a1
+    real*8,    dimension(la2) :: a2
+    real*8,    dimension(la3) :: a3
+    integer*4,value :: nd,nlf,n_low,la1,la2,la3
+    integer*4 :: ii,tx,ilil,il,ill,it,itt,ndl,ndt,ns,nstrtl,nstrtt,idx1,idx2,kt
+    real*8 :: zbutt,zautt
+    integer*4 :: istat
+    real*8 :: zbuttt(16)
+!    real*8, shared :: tmp(1) ! blocksize should be (64,1,1)
+ 
+    ii = blockIdx%x
+    tx = threadIdx%x
+
+    ndl   =ndlp(ii)   ; ndt   =ndtp(ii)   ; ns=ndl*ndt
+    nstrtl=nstrtlp(ii); nstrtt=nstrttp(ii)
+    idx1 = idxp1(ii)  ; idx2 = idxp2(ii)
+    kt=ktp(ii)
+
+    do ilil=1,kt,16
+       do il=ilil,min(kt,ilil+15)
+          zbuttt(il-ilil+1) = 0.0d0
+          do it=tx,ndt,32
+             itt=it+nstrtt-1
+             zbuttt(il-ilil+1)=zbuttt(il-ilil+1)+a1(it+(il-1)*ndt+idx1-1)*zu(itt)
+          enddo
+       enddo
+       do il=ilil,min(kt,ilil+15)
+          zbuttt(il-ilil+1) = zbuttt(il-ilil+1) + __shfl_xor(zbuttt(il-ilil+1),16)
+          zbuttt(il-ilil+1) = zbuttt(il-ilil+1) + __shfl_xor(zbuttt(il-ilil+1),8)
+          zbuttt(il-ilil+1) = zbuttt(il-ilil+1) + __shfl_xor(zbuttt(il-ilil+1),4)
+          zbuttt(il-ilil+1) = zbuttt(il-ilil+1) + __shfl_xor(zbuttt(il-ilil+1),2)
+          zbuttt(il-ilil+1) = zbuttt(il-ilil+1) + __shfl_xor(zbuttt(il-ilil+1),1)
+       enddo
+       do it=tx,ndl,32
+          zautt=0.0d0
+          do il=ilil,min(kt,ilil+15)
+             ill=it+nstrtl-1
+             zautt=zautt+a2(it+(il-1)*ndl+idx2-1)*zbuttt(il-ilil+1)
+          enddo
+          istat = atomicadd(zau(ill),zautt)
+       enddo
+    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low22
+
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low23                &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,            &
+    nd,nlf,n_low,la1,la2,la3)
+    integer*4, dimension(nlf) :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(nlf) :: idxp1,idxp2,idxp3
+    real*8,    dimension(nd)  :: zau,zu
+    real*8,    dimension(la1) :: a1
+    real*8,    dimension(la2) :: a2
+    real*8,    dimension(la3) :: a3
+    integer*4,value :: nd,nlf,n_low,la1,la2,la3
+    integer*4 :: ii,tx,ilil,il,ill,it,itt,ndl,ndt,ns,nstrtl,nstrtt,idx1,idx2,kt,ile
+    real*8 :: zbutt,zautt,zut
+    integer*4 :: istat
+    real*8 :: zbuttt(16)
+!    real*8, shared :: tmp(1) ! blocksize should be (64,1,1)
+ 
+    ii = blockIdx%x
+    tx = threadIdx%x
+
+    ndl   =ndlp(ii)   ; ndt   =ndtp(ii)   ; ns=ndl*ndt
+    nstrtl=nstrtlp(ii); nstrtt=nstrttp(ii)
+    idx1 = idxp1(ii)  ; idx2 = idxp2(ii)
+    kt=ktp(ii)
+
+    do ilil=1,kt,16
+       ile = min(kt,ilil+15)
+       do il=ilil,ile
+          zbuttt(il-ilil+1) = 0.0d0
+       enddo
+       do it=tx,ndt,32
+          itt=it+nstrtt-1
+          zut = zu(itt)
+          do il=ilil,ile
+             zbuttt(il-ilil+1)=zbuttt(il-ilil+1)+a1(it+(il-1)*ndt+idx1-1)*zut
+          enddo
+       enddo
+       do il=ilil,ile
+          zbuttt(il-ilil+1) = zbuttt(il-ilil+1) + __shfl_xor(zbuttt(il-ilil+1),16)
+          zbuttt(il-ilil+1) = zbuttt(il-ilil+1) + __shfl_xor(zbuttt(il-ilil+1),8)
+          zbuttt(il-ilil+1) = zbuttt(il-ilil+1) + __shfl_xor(zbuttt(il-ilil+1),4)
+          zbuttt(il-ilil+1) = zbuttt(il-ilil+1) + __shfl_xor(zbuttt(il-ilil+1),2)
+          zbuttt(il-ilil+1) = zbuttt(il-ilil+1) + __shfl_xor(zbuttt(il-ilil+1),1)
+       enddo
+       do it=tx,ndl,32
+          zautt=0.0d0
+          do il=ilil,ile
+             ill=it+nstrtl-1
+             zautt=zautt+a2(it+(il-1)*ndl+idx2-1)*zbuttt(il-ilil+1)
+          enddo
+          istat = atomicadd(zau(ill),zautt)
+       enddo
+    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low23
+
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_low3                 &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,            &
+    nd,nlf,n_low,la1,la2,la3)
+    integer*4, dimension(nlf) :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(nlf) :: idxp1,idxp2,idxp3
+    real*8,    dimension(nd)  :: zau,zu
+    real*8,    dimension(la1) :: a1
+    real*8,    dimension(la2) :: a2
+    real*8,    dimension(la3) :: a3
+    integer*4,value :: nd,nlf,n_low,la1,la2,la3
+    integer*4 :: ii,tx,ilil,il,ill,it,itt,itit,ndl,ndt,ns,nstrtl,nstrtt,idx1,idx2,kt
+    real*8 :: zbutt,zautt,zuu
+    integer*4 :: istat
+    real*8, dimension(32) :: zbuttt
+!    real*8, shared :: tmp(1) ! blocksize should be (64,1,1)
+ 
+    ii = blockIdx%x
+    tx = threadIdx%x
+
+    ndl   =ndlp(ii)   ; ndt   =ndtp(ii)   ; ns=ndl*ndt
+    nstrtl=nstrtlp(ii); nstrtt=nstrttp(ii)
+    idx1 = idxp1(ii)  ; idx2 = idxp2(ii)
+    kt=ktp(ii)
+
+    do ilil=1,kt,32
+       do il=ilil,min(kt,ilil+31)
+          zbutt = 0.0d0
+          do it=tx,ndt,32
+             itt=it+nstrtt-1
+             zbutt=zbutt+a1(it+(il-1)*ndt+idx1-1)*zu(itt)
+          enddo
+          zbutt = zbutt + __shfl_xor(zbutt,16)
+          zbutt = zbutt + __shfl_xor(zbutt,8)
+          zbutt = zbutt + __shfl_xor(zbutt,4)
+          zbutt = zbutt + __shfl_xor(zbutt,2)
+          zbutt = zbutt + __shfl_xor(zbutt,1)
+          zbuttt(il-ilil+1) = zbutt
+       enddo
+       do it=tx,ndl,32
+          zautt=0.0d0
+          do il=ilil,min(kt,ilil+31)
+             ill=it+nstrtl-1
+             zautt=zautt+a2(it+(il-1)*ndl+idx2-1)*zbuttt(il-ilil+1)
+          enddo
+          istat = atomicadd(zau(ill),zautt)
+       enddo
+    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_low3
+
+
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_dense                &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,            &
+    nd,nlf,n_low,n_dense,la1,la2,la3)
+    integer*4, dimension(nlf) :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(nlf) :: idxp1,idxp2,idxp3
+    real*8,    dimension(nd)  :: zau,zu
+    real*8,    dimension(la1) :: a1
+    real*8,    dimension(la2) :: a2
+    real*8,    dimension(la3) :: a3
+    integer*4,value :: nd,nlf,n_low,n_dense,la1,la2,la3
+    integer*4 :: ii,tx,il,ill,it,itt,ndl,ndt,ns,nstrtl,nstrtt,idx3
+    integer*4 :: istat
+    real*8 :: zautt
+
+    ii = blockIdx%x + n_low
+    tx = threadIdx%x
+!    do ii=n_low+1,n_low+n_dense
+
+    ndl   =ndlp(ii)   ; ndt   =ndtp(ii)   ; ns=ndl*ndt
+    nstrtl=nstrtlp(ii); nstrtt=nstrttp(ii)
+    idx3 = idxp3(ii)
+
+    do il=1,ndl
+       ill=il+nstrtl-1
+       zautt = 0.0d0
+       do it=tx,ndt,32
+          itt=it+nstrtt-1
+          zautt = zautt + a3(it+(il-1)*ndt+idx3-1)*zu(itt)
+       enddo
+       zautt = zautt + __shfl_xor(zautt,16)
+       zautt = zautt + __shfl_xor(zautt,8)
+       zautt = zautt + __shfl_xor(zautt,4)
+       zautt = zautt + __shfl_xor(zautt,2)
+       zautt = zautt + __shfl_xor(zautt,1)
+       ! do it=1,ndt
+       !    itt=it+nstrtt-1
+       !    zautt = zautt + a3(it+(il-1)*ndt+idx3-1)*zu(itt)
+       ! enddo
+!       zau(ill)=zau(ill)+zautt
+       if(tx==1) istat = atomicadd(zau(ill),zautt)
+       
+    enddo
+!    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_dense
+
+  attributes(global) subroutine HACApK_adot_body_lfmtx_cuda_dense2               &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a3,idxp3,            &
+    nd,nlf,n_low,n_dense,la3)
+    integer*4, dimension(nlf) :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(nlf) :: idxp3
+    real*8,    dimension(nd)  :: zau,zu
+    real*8,    dimension(la3) :: a3
+    integer*4,value :: nd,nlf,n_low,n_dense,la3
+    integer*4 :: ii,tx,ty,il,ill,it,itt,ndl,ndt,ns,nstrtl,nstrtt,idx3,bydim,bid
+    integer*4 :: istat
+    real*8 :: zautt
+
+    bid = blockIdx%x
+    ii = blockIdx%x + n_low
+    bydim = blockDim%y
+    tx = threadIdx%x
+    ty = threadIdx%y
+!    do ii=n_low+1,n_low+n_dense
+
+    ndl   =ndlp(ii)   ; ndt   =ndtp(ii)   ; ns=ndl*ndt
+    nstrtl=nstrtlp(ii); nstrtt=nstrttp(ii)
+    idx3 = idxp3(ii)
+
+    do il=ty,ndl,bydim
+       ill=il+nstrtl-1
+       zautt = 0.0d0
+       do it=tx,ndt,32
+          itt=it+nstrtt-1
+          zautt = zautt + a3(it+(il-1)*ndt+idx3-1)*zu(itt)
+       enddo
+       zautt = zautt + __shfl_xor(zautt,16)
+       zautt = zautt + __shfl_xor(zautt,8)
+       zautt = zautt + __shfl_xor(zautt,4)
+       zautt = zautt + __shfl_xor(zautt,2)
+       zautt = zautt + __shfl_xor(zautt,1)
+       ! do it=1,ndt
+       !    itt=it+nstrtt-1
+       !    zautt = zautt + a3(it+(il-1)*ndt+idx3-1)*zu(itt)
+       ! enddo
+!       zau(ill)=zau(ill)+zautt
+       if(tx==1) istat = atomicadd(zau(ill),zautt)
+
+       ! if(bid < 10) then 
+       !    if(tx==1 .and. ty == 1)  print *, blockIdx%x, zautt
+       ! endif
+
+
+    enddo
+!    enddo
+
+  end subroutine HACApK_adot_body_lfmtx_cuda_dense2
+
+
+  subroutine HACApK_adot_body_lfmtx_cuda_wrapper                                  &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,             &
+    nd,nlf,n_low,n_dense)
+    integer*4, dimension(:),device :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+#if OPT>=7
+    integer*4, dimension(:,:),device :: idxp1,idxp2
+    integer*4, dimension(:),device :: idxp3
+#else
+    integer*4, dimension(:),device :: idxp1,idxp2,idxp3
+#endif
+    real*8,    device :: zau(*),zu(*)
+    real*8,    dimension(:),device :: a1,a2,a3
+    integer*4 :: nd,nlf,n_low,n_dense
+    integer*4 :: istat
+    type(dim3) :: dimGrid, dimBlock, dimBlock2, dimBlock3
+    integer*4 :: la1,la2,la3,kmax
+!    real*8 :: zau_tmp(nd)
+    logical,save :: flag = .true.
+    integer(kind=cuda_stream_kind) :: stream1, stream2
+
+    la1 = size(a1); la2 = size(a2); la3 = size(a3)
+    kmax = size(idxp1,1)
+!    print *, "kmax",kmax
+    ! if(flag == .true.) then
+    !    print *, "flop1 = ", (4.0d0*(la1+la2))/1000000000.0d0
+    !    print *, "byte1 = ", (8.0d0*(la1+la2)+3.0d0*nd)/1000000000.0d0
+    !    print *, "flop2 = ", (4.0d0*(la3))/1000000000.0d0
+    !    print *, "byte2 = ", (8.0d0*(la3)+3.0d0*nd)/1000000000.0d0
+    !    flag = .false.
+    ! endif
+    istat = cudaStreamCreate(stream1)
+    istat = cudaStreamCreate(stream2)
+
+    dimGrid  = dim3(n_low, 1, 1)
+!    dimGrid  = dim3(1, 1, 1)
+    dimBlock = dim3(32, 1, 1)
+    dimBlock2 = dim3(32, 2, 1)
+    dimBlock3 = dim3(64, 1, 1)
+!    dimBlock = dim3(1, 1, 1)
+#if OPT>=7
+    call HACApK_adot_body_lfmtx_cuda_low7<<<dimGrid,dimBlock3>>>                    &
+         (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,idxp1,idxp2,        &
+         nd,nlf,n_low,la1,la2,kmax)
+!    stop
+#else
+!    call HACApK_adot_body_lfmtx_cuda_low0<<<dimGrid,dimBlock>>>                    &
+!    call HACApK_adot_body_lfmtx_cuda_low0_2<<<dimGrid,dimBlock2>>>                    &
+    call HACApK_adot_body_lfmtx_cuda_low0_3<<<dimGrid,dimBlock3>>>                    &
+
+!    call HACApK_adot_body_lfmtx_cuda_low2<<<dimGrid,dimBlock>>>                    &
+!    call HACApK_adot_body_lfmtx_cuda_low23<<<dimGrid,dimBlock>>>                    &
+         (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,        &
+         nd,nlf,n_low,la1,la2,la3)
+#endif
+
+    dimGrid  = dim3(n_dense, 1, 1)
+!    dimBlock = dim3(1, 1, 1)
+!    call HACApK_adot_body_lfmtx_cuda_dense<<<dimGrid,dimBlock>>>                  &
+    call HACApK_adot_body_lfmtx_cuda_dense2<<<dimGrid,dimBlock2>>>                  &
+         (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a3,idxp3,        &
+         nd,nlf,n_low,n_dense,la3)
+ 
+    istat = cudaDeviceSynchronize()
+!    zau_tmp(:) = zau(:)
+!    print *, minval(zau_tmp(1:nd)),maxval(zau_tmp(1:nd))
+  end subroutine HACApK_adot_body_lfmtx_cuda_wrapper
+
+
+#define BLOCKDIMX 64
+  subroutine HACApK_adot_body_lfmtx_cuda_wrapper2                                 &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,             &
+    nd,nlf,n_low,n_dense,subidt,subidl,subidd,kt_prefix,zbu_tmp)
+    include 'mpif.h'
+    integer*4, dimension(:),device :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(:,:),device :: idxp1,idxp2
+    integer*4, dimension(:),device :: idxp3
+    integer*4, dimension(:,:),device :: subidt,subidl
+    integer*4, dimension(:),device :: subidd
+    integer*4, dimension(:),device :: kt_prefix
+    real*8,    dimension(:),device :: zbu_tmp
+    real*8,    device :: zau(*),zu(*)
+    real*8,    dimension(:),device :: a1,a2,a3
+    integer*4 :: nd,nlf,n_low,n_dense
+    integer*4 :: istat
+    type(dim3) :: dimGrid, dimBlock, dimGrid2, dimBlock2
+    integer*4 :: la1,la2,la3,kmax,lent,lenl,lenkt,lend
+!    real*8 :: zau_tmp(nd)
+    real*8 , dimension(:),allocatable :: zbu_tmp_cpu
+    logical,save :: flag = .true.
+    real*8 :: t1,t2,t3
+    integer*4, dimension(:),allocatable :: i_tmp_cpu
+    integer*4 :: i
+    integer*4,save :: count = 0
+
+    la1 = size(a1); la2 = size(a2); la3 = size(a3)
+    kmax = size(idxp1,1)
+    lent = size(subidt,1)
+    lenl = size(subidl,1)
+    lenkt = size(zbu_tmp)
+    lend = size(subidd,1)
+
+    ! if(flag) then
+    !    print *, la3, la3*8.0d0/1000000000.0d0
+    !    flag = .false.
+    !    allocate(i_tmp_cpu(n_dense))
+    !    i_tmp_cpu(1:n_dense) = ndlp(n_low+1:n_low+n_dense)
+    !    print *, "min,max,ave", minval(i_tmp_cpu),maxval(i_tmp_cpu),sum(i_tmp_cpu)/n_dense
+    !    print *, "lent,lenl,lend", lent,lenl,lend,n_low,n_dense
+    !    deallocate(i_tmp_cpu)
+    ! endif
+
+    ! dimGrid  = dim3(n_low, 1, 1)
+    ! dimBlock = dim3(32, 1, 1)
+    ! dimBlock2 = dim3(32, 2, 1)
+    ! dimBlock3 = dim3(64, 1, 1)
+    ! call HACApK_adot_body_lfmtx_cuda_low7<<<dimGrid,dimBlock3>>>                    &
+    !      (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,idxp1,idxp2,        &
+    !      nd,nlf,n_low,la1,la2,kmax)
+
+    ! count = count + 1
+    ! if(count == 2) then
+
+
+    ! dimGrid  = dim3(lent, 1, 1)
+    ! dimBlock = dim3(BLOCKDIMX, 1, 1)
+    ! call HACApK_adot_body_lfmtx_cuda_low_balanced_col<<<dimGrid,dimBlock>>>         &
+    !      (zbu_tmp,zu,subidt,ndtp,nstrttp,ktp,a1,idxp1,kt_prefix,nd,nlf,n_low,la1,kmax,lent,lenkt)
+
+    dimGrid  = dim3(lent, 1, 1)
+    dimBlock = dim3(BLOCKDIMX, 1, 1)
+!    istat = cudaDeviceSynchronize()
+    t1 = MPI_Wtime()
+    ! call HACApK_adot_body_lfmtx_cuda_low_balanced_col2<<<dimGrid,dimBlock>>>         &
+    !      (zbu_tmp,zu,subidt,ndtp,nstrttp,ktp,a1,idxp1,kt_prefix,nd,nlf,n_low,la1,kmax,lent,lenkt)
+    call HACApK_adot_body_lfmtx_cuda_low_balanced_col3<<<dimGrid,dimBlock>>>         &
+         (zbu_tmp,zu,subidt,ndtp,nstrttp,ktp,a1,idxp1,kt_prefix,nd,nlf,n_low,la1,kmax,lent,lenkt)
+ !   istat = cudaDeviceSynchronize()
+    t2 = MPI_Wtime()
+!    print *, "col", t2-t1
+
+    ! allocate(zbu_tmp_cpu(lenkt))
+    ! zbu_tmp_cpu(1:lenkt) = zbu_tmp(1:lenkt)
+    ! do i = 1, 100
+    !    print *, "cpu", i, zbu_tmp_cpu(i)
+    ! end do
+    ! stop
+
+    dimGrid  = dim3(lenl, 1, 1)
+    dimBlock = dim3(BLOCKDIMX, 1, 1)
+!    istat = cudaDeviceSynchronize()
+    t1 = MPI_Wtime()
+    call HACApK_adot_body_lfmtx_cuda_low_balanced_row<<<dimGrid,dimBlock>>>         &
+         (zau,zbu_tmp,subidl,ndlp,nstrtlp,ktp,a2,idxp2,kt_prefix,nd,nlf,n_low,la2,kmax,lenl,lenkt)
+    ! endif
+!    istat = cudaDeviceSynchronize()
+    t2 = MPI_Wtime()
+!    print *, "row", t2-t1
+
+    dimGrid   = dim3(n_dense, 1, 1)
+    dimBlock  = dim3(32, 2, 1)
+
+    dimGrid2  = dim3((lend-1)/64+1, 1, 1)
+    dimBlock2 = dim3(64, 1, 1)
+!    dimBlock = dim3(1, 1, 1)
+!    call HACApK_adot_body_lfmtx_cuda_dense<<<dimGrid,dimBlock>>>                  &
+!    istat = cudaDeviceSynchronize()
+    t1 = MPI_Wtime()
+    ! call HACApK_adot_body_lfmtx_cuda_dense2<<<dimGrid,dimBlock>>>                  &
+    !      (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a3,idxp3,        &
+    !      nd,nlf,n_low,n_dense,la3)
+
+    ! call HACApK_adot_body_lfmtx_cuda_dense_balanced<<<dimGrid2,dimBlock2>>>         &
+    !      (zau,zu,subidd,ndtp,nstrttp,ndlp,nstrtlp,a3,idxp3,nd,nlf,n_low,la3,lend)
+
+
+    ! allocate(i_tmp_cpu(n_dense))
+    ! i_tmp_cpu(1:n_dense) = ndlp(n_low+1:n_low+n_dense)
+    ! do i = 1, 100
+    !    print *, "ndlp", i_tmp_cpu(i)
+    ! end do
+    ! i_tmp_cpu(1:n_dense) = idxp3(1:n_dense)
+    ! do i = 1, 100
+    !    print *, "idxp3", i_tmp_cpu(i)
+    ! end do
+    ! i_tmp_cpu(1:n_dense) = subidd(1:n_dense)
+    ! do i = 1, 100
+    !    print *, "subidd", i_tmp_cpu(i)-n_low
+    ! end do
+    ! deallocate(i_tmp_cpu)
+    ! stop
+
+    call HACApK_adot_body_lfmtx_cuda_dense_balanced_rowmajor<<<dimGrid2,dimBlock2>>>         &
+         (zau,zu,subidd,ndtp,nstrttp,ndlp,nstrtlp,a3,idxp3,nd,nlf,n_low,n_dense,la3,lend)
+
+    ! count = count + 1
+    ! if(count == 2) stop
+
+!    istat = cudaDeviceSynchronize()
+!    t2 = MPI_Wtime()
+!    print *, "dense", t2-t1
+    istat = cudaDeviceSynchronize()
+!    stop
+!    zau_tmp(:) = zau(:)
+!    print *, minval(zau_tmp(1:nd)),maxval(zau_tmp(1:nd))
+  end subroutine HACApK_adot_body_lfmtx_cuda_wrapper2
+
+#define MOPT 4
+#define BLOCKDIMX 64
+  subroutine HACApK_adot_body_lfmtx_cuda_wrapper3                                 &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,             &
+    nd,nlf,n_low,n_dense,subidt,subidl,subidd,kt_prefix,zbu_tmp,st_ctl,wws,wwr,stream1)
+    use m_HACApK_base
+    include 'mpif.h'
+    integer*4, dimension(:),device :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(:,:),device :: idxp1,idxp2
+    integer*4, dimension(:),device :: idxp3
+    integer*4, dimension(:,:),device :: subidt,subidl
+    integer*4, dimension(:),device :: subidd
+    integer*4, dimension(:),device :: kt_prefix
+    real*8,    dimension(:),device :: zbu_tmp
+    type(st_HACApK_lcontrol) :: st_ctl
+    real*8,    dimension(:) :: wws,wwr
+    
+    integer(kind=cuda_stream_kind) :: stream1
+    
+    real*8,    device :: zau(*),zu(*)
+    real*8,    dimension(:),device :: a1,a2,a3
+    integer*4 :: nd,nlf,n_low,n_dense
+    integer*4 :: istat
+    type(dim3) :: dimGrid, dimBlock, dimGrid2, dimBlock2
+!    integer*4 :: la1,la2,la3,kmax,lent,lenl,lenkt,lend
+!    real*8 :: zau_tmp(nd)
+    real*8 , dimension(:),allocatable :: zbu_tmp_cpu
+    real*8 :: t1,t2,t3
+    integer*4, dimension(:),allocatable :: i_tmp_cpu
+    real*8, dimension(:),allocatable :: r_tmp_cpu
+    integer*4 :: i
+    integer*4,save :: count = 0
+
+    logical  ,save :: flag = .true.
+    integer*4,save,pointer :: lpmd(:),lnp(:),lsp(:),lthr(:)
+    integer*4,save :: la1,la2,la3,kmax,lent,lenl,lenkt,lend
+    integer*4,save :: mpinr,mpilog,nrank,icomm,ndnr_s,ndnr_e,ndnr,wwsize,ncdp,ncsp
+    integer*4 :: isct(2),irct(2),ic,ierr
+    integer*4,dimension(:,:),allocatable,save :: isct2D,irct2D
+    integer*4,dimension(:,:),allocatable,save :: isrct2D
+    integer*4,dimension(:,:),allocatable,device :: isrct2D_d
+    real*8,allocatable,dimension(:),device :: wws_d,wwr_d
+    integer*4 :: ISTATUS(MPI_STATUS_SIZE)
+    integer*4,dimension(:,:),allocatable,save :: sta1
+    integer*4,dimension(:),allocatable,save :: req1
+    real*8,allocatable,dimension(:,:) :: ww2D
+    real*8,allocatable,dimension(:,:),device :: ww2D_d
+    
+
+    ! logical   :: flag = .true.
+    ! integer*4,pointer :: lpmd(:),lnp(:),lsp(:),lthr(:)
+    ! integer*4 :: la1,la2,la3,kmax,lent,lenl,lenkt,lend
+    ! integer*4 :: mpinr,mpilog,nrank,icomm,ndnr_s,ndnr_e,ndnr,wwsize,ncdp,ncsp,ic,ierr
+    ! integer*4 :: isct(2),irct(2)
+    ! real*8,allocatable,dimension(:),device :: wws_d,wwr_d
+    ! integer*4 :: ISTATUS(MPI_STATUS_SIZE)
+
+
+    if(flag) then
+       la1  = size(a1); la2 = size(a2); la3 = size(a3)
+       kmax = size(idxp1,1)
+       lent = size(subidt,1)
+       lenl = size(subidl,1)
+       lenkt= size(zbu_tmp)
+       lend = size(subidd,1)
+
+       ! print *, la3, la3*8.0d0/1000000000.0d0
+       ! allocate(i_tmp_cpu(n_dense))
+       ! i_tmp_cpu(1:n_dense) = ndlp(n_low+1:n_low+n_dense)
+       ! print *, "min,max,ave", minval(i_tmp_cpu),maxval(i_tmp_cpu),sum(i_tmp_cpu)/n_dense
+       ! print *, "lent,lenl,lend", lent,lenl,lend,n_low,n_dense
+       ! deallocate(i_tmp_cpu)
+
+       lpmd => st_ctl%lpmd(:); lnp(0:) => st_ctl%lnp; lsp(0:) => st_ctl%lsp;lthr(0:) => st_ctl%lthr
+       mpinr=lpmd(3); mpilog=lpmd(4); nrank=lpmd(2); icomm=lpmd(1)
+       ndnr_s=lpmd(6); ndnr_e=lpmd(7); ndnr=lpmd(5)
+#if MOPT <= 2
+       ncdp=mod(mpinr+1,nrank)
+       ncsp=mod(mpinr+nrank-1,nrank)
+#else       
+       ! allocate(isct2D(2,nrank))
+       ! allocate(irct2D(2,nrank))
+       ! isct2D(1,mpinr)=lnp(mpinr)
+       ! isct2D(2,mpinr)=lsp(mpinr);
+       ! irct2D(1,mpinr)=lnp(mpinr)
+       ! irct2D(2,mpinr)=lsp(mpinr);
+
+       allocate(isrct2D(2,0:nrank-1))
+       isrct2D(1,mpinr)=lnp(mpinr)
+       isrct2D(2,mpinr)=lsp(mpinr);
+
+       do ic=1,nrank-1
+          ncdp=mod(mpinr+ic,nrank)
+          ncsp=mod(mpinr+nrank-ic,nrank)
+          call MPI_SENDRECV(isrct2D(1,mpinr),2,MPI_INTEGER,ncdp,1, &
+               isrct2D(1,ncsp),2,MPI_INTEGER,ncsp,1,icomm,ISTATUS,ierr)
+       enddo
+
+       ! if(mpinr==0) then
+       !    print *, "mpinr", mpinr, ncsp
+       !    do ic = 1, nrank-1
+       !       print *, ic, irct2D(1,ic)
+       !    end do
+       ! end if
+       ! stop 
+       allocate(sta1(MPI_STATUS_SIZE,2*(nrank-1)))
+       allocate(req1(2*(nrank-1)))
+ #endif
+       flag = .false.
+    endif
+
+    dimGrid  = dim3((lenkt-1)/64+1, 1, 1)
+    dimBlock = dim3(64, 1, 1)
+    call array_init_kernel_double<<<dimGrid,dimBlock,0,stream1>>>   &
+         (zbu_tmp,0.0d0,lenkt)
+
+    dimGrid  = dim3((nd-1)/64+1, 1, 1)
+    dimBlock = dim3(64, 1, 1)
+    call array_init_kernel_double<<<dimGrid,dimBlock,0,stream1>>>   &
+         (zau,0.0d0,nd)
+
+    dimGrid  = dim3(lent, 1, 1)
+    dimBlock = dim3(BLOCKDIMX, 1, 1)
+    call HACApK_adot_body_lfmtx_cuda_low_balanced_col3<<<dimGrid,dimBlock,0,stream1>>>         &
+         (zbu_tmp,zu,subidt,ndtp,nstrttp,ktp,a1,idxp1,kt_prefix,nd,nlf,n_low,la1,kmax,lent,lenkt)
+
+    dimGrid  = dim3(lenl, 1, 1)
+    dimBlock = dim3(BLOCKDIMX, 1, 1)
+    call HACApK_adot_body_lfmtx_cuda_low_balanced_row<<<dimGrid,dimBlock,0,stream1>>>         &
+         (zau,zbu_tmp,subidl,ndlp,nstrtlp,ktp,a2,idxp2,kt_prefix,nd,nlf,n_low,la2,kmax,lenl,lenkt)
+
+    dimGrid2  = dim3((lend-1)/64+1, 1, 1)
+    dimBlock2 = dim3(64, 1, 1)
+
+    call HACApK_adot_body_lfmtx_cuda_dense_balanced_rowmajor<<<dimGrid2,dimBlock2,0,stream1>>>         &
+         (zau,zu,subidd,ndtp,nstrttp,ndlp,nstrtlp,a3,idxp3,nd,nlf,n_low,n_dense,la3,lend)
+    
+#if MOPT == 1
+!normal
+    istat = cudaDeviceSynchronize()
+    if(nrank>1)then
+       allocate(wwr_d(size(wwr)))
+       wws(1:lnp(mpinr))=zau(lsp(mpinr):lsp(mpinr)+lnp(mpinr)-1)
+!       if(mpinr == 0) print *, "wws", sum(wws(1:lnp(mpinr))), lsp(mpinr), lnp(mpinr)
+       isct(1)=lnp(mpinr);isct(2)=lsp(mpinr);
+
+       do ic=1,nrank-1
+          call MPI_SENDRECV(isct,2,MPI_INTEGER,ncdp,1, &
+               irct,2,MPI_INTEGER,ncsp,1,icomm,ISTATUS,ierr)
+          call MPI_SENDRECV(wws,isct,MPI_DOUBLE_PRECISION,ncdp,1, &
+               wwr,irct,MPI_DOUBLE_PRECISION,ncsp,1,icomm,ISTATUS,ierr)
+
+!          zau(irct(2):irct(2)+irct(1)-1)=zau(irct(2):irct(2)+irct(1)-1)+wwr(:irct(1))
+          wwr_d(1:irct(1)) = wwr(1:irct(1))
+!          if(mpinr == 0) print *, "wwr", sum(wwr(1:irct(1))),irct(2),irct(1)
+          dimGrid  = dim3((irct(1)-1)/64+1, 1, 1)
+          dimBlock = dim3(64, 1, 1)
+          call zau_recv<<<dimGrid,dimBlock>>>(zau,wwr_d,irct(2),irct(1),nd)
+          istat = cudaDeviceSynchronize()
+
+          wws(:irct(1))=wwr(:irct(1))
+          isct(:2)=irct(:2)
+       enddo
+       deallocate(wwr_d)
+!       stop
+    endif
+#elif MOPT == 2
+!gpu direct
+    istat = cudaDeviceSynchronize()
+    if(nrank>1)then
+       allocate(wwr_d(size(wwr)))
+       allocate(wws_d(size(wws)))
+!       wws(1:lnp(mpinr))=zau(lsp(mpinr):lsp(mpinr)+lnp(mpinr)-1)
+!       if(mpinr == 0) print *, "wws", sum(wws(1:lnp(mpinr))), lsp(mpinr), lnp(mpinr)
+       dimGrid  = dim3((lnp(mpinr)-1)/64+1, 1, 1)
+       dimBlock = dim3(64, 1, 1)
+       call zau_send<<<dimGrid,dimBlock>>>(wws_d,zau,lsp(mpinr),lnp(mpinr),nd)
+       istat = cudaDeviceSynchronize()
+
+       isct(1)=lnp(mpinr);isct(2)=lsp(mpinr);
+
+       do ic=1,nrank-1
+          call MPI_SENDRECV(isct,2,MPI_INTEGER,ncdp,1, &
+               irct,2,MPI_INTEGER,ncsp,1,icomm,ISTATUS,ierr)
+          ! call MPI_SENDRECV(wws,isct,MPI_DOUBLE_PRECISION,ncdp,1, &
+          !      wwr,irct,MPI_DOUBLE_PRECISION,ncsp,1,icomm,ISTATUS,ierr)
+          call MPI_SENDRECV(wws_d,isct,MPI_DOUBLE_PRECISION,ncdp,1, &
+               wwr_d,irct,MPI_DOUBLE_PRECISION,ncsp,1,icomm,ISTATUS,ierr)
+
+!          zau(irct(2):irct(2)+irct(1)-1)=zau(irct(2):irct(2)+irct(1)-1)+wwr(:irct(1))
+!          wwr_d(1:irct(1)) = wwr(1:irct(1))
+          ! wwr(1:irct(1)) = wwr_d(1:irct(1))
+          ! if(mpinr == 0) print *, "wwr", sum(wwr(1:irct(1))),irct(2),irct(1)
+
+          dimGrid  = dim3((irct(1)-1)/64+1, 1, 1)
+          dimBlock = dim3(64, 1, 1)
+          call zau_recv<<<dimGrid,dimBlock>>>(zau,wwr_d,irct(2),irct(1),nd)
+          istat = cudaDeviceSynchronize()
+
+!          wws_d(:irct(1))=wwr_d(:irct(1))
+          dimGrid  = dim3((irct(1)-1)/64+1, 1, 1)
+          dimBlock = dim3(64, 1, 1)
+          call dcopy<<<dimGrid,dimBlock>>>(wws_d,wwr_d,irct(1))
+          istat = cudaDeviceSynchronize()
+          isct(:2)=irct(:2)
+       enddo
+       deallocate(wwr_d)
+!       stop
+    endif
+#elif MOPT == 3
+    if(nrank>1)then
+       allocate(wwr_d(size(wwr)))
+       istat = cudaDeviceSynchronize()
+       wws(1:lnp(mpinr))=zau(lsp(mpinr):lsp(mpinr)+lnp(mpinr)-1)
+
+       ! isct(1)=lnp(mpinr);isct(2)=lsp(mpinr);
+
+       do ic=1,nrank-1
+          ncdp=mod(mpinr+ic,nrank)
+          ncsp=mod(mpinr+nrank-ic,nrank)
+          ! call MPI_SENDRECV(isct,2,MPI_INTEGER,ncdp,1, &
+          !      irct,2,MPI_INTEGER,ncsp,1,icomm,ISTATUS,ierr)
+          ! call MPI_SENDRECV(wws,isct,MPI_DOUBLE_PRECISION,ncdp,1, &
+          !      wwr,irct,MPI_DOUBLE_PRECISION,ncsp,1,icomm,ISTATUS,ierr)
+          call MPI_SENDRECV(wws,lnp(mpinr),MPI_DOUBLE_PRECISION,ncdp,1, &
+               wwr,isrct2D(1,ncsp),MPI_DOUBLE_PRECISION,ncsp,1,icomm,ISTATUS,ierr)
+!          if(mpinr == 1) print *, __LINE__, sum(wwr(:)), sum(wws(:))
+
+!          wwr_d(1:irct(1)) = wwr(1:irct(1))
+          ! dimGrid  = dim3((irct(1)-1)/64+1, 1, 1)
+          ! dimBlock = dim3(64, 1, 1)
+          ! call zau_recv<<<dimGrid,dimBlock>>>(zau,wwr_d,irct(2),irct(1),nd)
+          ! istat = cudaDeviceSynchronize()
+          ! wws(:irct(1))=wwr(:irct(1))
+
+          wwr_d(1:isrct2D(1,ncsp)) = wwr(1:isrct2D(1,ncsp))
+          dimGrid  = dim3((isrct2D(1,ncsp)-1)/64+1, 1, 1)
+          dimBlock = dim3(64, 1, 1)
+          call zau_recv<<<dimGrid,dimBlock>>>(zau,wwr_d,isrct2D(2,ncsp),isrct2D(1,ncsp),nd)
+          istat = cudaDeviceSynchronize()
+          ! allocate(r_tmp_cpu(nd))
+          ! r_tmp_cpu(1:nd) = zau(1:nd)
+          ! print *, mpinr, sum(r_tmp_cpu)
+          ! print *, mpinr, sum(isrct2D(1,:))
+
+       enddo
+       deallocate(wwr_d)
+    endif
+#elif MOPT == 4
+    
+    if(nrank>1)then
+!       if(mpinr == 1) print *, __LINE__
+       allocate(ww2D(size(wwr),0:nrank-1))
+       allocate(ww2D_d(size(wwr),0:nrank-1))
+!       if(mpinr == 1) print *, __LINE__
+       do ic = 1, nrank-1
+          ncsp=mod(mpinr+nrank-ic,nrank)
+          call MPI_IRECV(ww2D(1,ncsp),isrct2D(1,ncsp),MPI_DOUBLE_PRECISION,ncsp,1,icomm,req1(nrank-1+ic),ierr)
+       end do
+!       if(mpinr == 1) print *, __LINE__
+
+       allocate(isrct2D_d(2,0:nrank-1))
+       isrct2D_d(:,:) = isrct2D(:,:)
+       istat = cudaDeviceSynchronize()
+       ww2D(1:lnp(mpinr),mpinr)=zau(lsp(mpinr):lsp(mpinr)+lnp(mpinr)-1)
+!       if(mpinr == 1) print *, __LINE__
+
+       do ic = 1, nrank-1
+          ncdp=mod(mpinr+ic,nrank)
+          call MPI_ISEND(ww2D(1,mpinr),isrct2D(1,mpinr),MPI_DOUBLE_PRECISION,ncdp,1,icomm,req1(ic),ierr)
+       end do
+!       if(mpinr == 1) print *, __LINE__
+
+       call MPI_WAITALL(2*(nrank-1),req1,sta1,ierr)
+
+!       if(mpinr == 1) print *, __LINE__, sum(ww2D(:,0)), sum(ww2D(:,1))
+       ! do ic = 1, nrank-1
+       !    ncsp=mod(mpinr+nrank+ic-2,nrank)
+       !    ww2D_d(1:isrct2D(1,ncsp),ncsp) = ww2D(1:isrct2D(1,ncsp),ncsp)
+       ! end do
+       ww2D_d(:,:) = ww2D(:,:)
+!       if(mpinr == 1) print *, __LINE__
+
+       ! dimGrid  = dim3((size(wwr)-1)/64+1, 1, 1)
+       ! dimBlock = dim3(64, 1, 1)
+       ! call zau_recv2D<<<dimGrid,dimBlock,0,stream1>>>(zau,ww2D_d,isrct2D_d,size(wwr,1),nrank,nd,mpinr)
+
+       do ic = 1, nrank-1
+          ncsp=mod(mpinr+nrank-ic,nrank)
+          dimGrid  = dim3((isrct2D(1,ncsp)-1)/64+1, 1, 1)
+          dimBlock = dim3(64, 1, 1)
+          call zau_recv<<<dimGrid,dimBlock,0,stream1>>>(zau,ww2D_d(:,ncsp),isrct2D(2,ncsp),isrct2D(1,ncsp),nd)
+       end do
+
+!       if(mpinr == 1) print *, __LINE__
+
+       ! allocate(r_tmp_cpu(nd))
+       ! r_tmp_cpu(1:nd) = zau(1:nd)
+       ! if(mpinr == 1) print *, sum(r_tmp_cpu)
+
+       ! if(count == 1) stop
+       ! count = count+1
+
+       deallocate(isrct2D_d)
+       deallocate(ww2D)
+       deallocate(ww2D_d)
+    endif
+    istat = cudaDeviceSynchronize()
+!    if(mpinr == 1) print *, __LINE__
+
+#endif
+  end subroutine HACApK_adot_body_lfmtx_cuda_wrapper3
+
+
+#define BLOCKDIMX 64
+  subroutine HACApK_adot_body_lfmtx_cuda_wrapper4                                 &
+    (zau,zu,ndlp,ndtp,nstrtlp,nstrttp,ktp,a1,a2,a3,idxp1,idxp2,idxp3,             &
+    nd,nlf,n_low,n_dense,subidt,subidl,subidd,kt_prefix,zbu_tmp,st_ctl,wws,wwr,   &
+    stream1,isrct,isrct_d,ww,ww_d)
+    use m_HACApK_base
+    include 'mpif.h'
+    integer*4, dimension(:),device :: ndlp,ndtp,nstrtlp,nstrttp,ktp
+    integer*4, dimension(:,:),device :: idxp1,idxp2
+    integer*4, dimension(:),device :: idxp3
+    integer*4, dimension(:,:),device :: subidt,subidl
+    integer*4, dimension(:),device :: subidd
+    integer*4, dimension(:),device :: kt_prefix
+    real*8,    dimension(:),device :: zbu_tmp
+    type(st_HACApK_lcontrol) :: st_ctl
+    real*8,    dimension(:) :: wws,wwr
+    integer(kind=cuda_stream_kind) :: stream1
+    integer*4,dimension(:,0:) :: isrct
+    integer*4,dimension(:,0:),device :: isrct_d
+    real*8,   dimension(:,0:) :: ww
+    real*8,   dimension(:,0:),device :: ww_d
+    ! integer*4,dimension(:,:) :: isrct
+    ! integer*4,dimension(:,:),device :: isrct_d
+    ! real*8,   dimension(:,:) :: ww
+    ! real*8,   dimension(:,:),device :: ww_d
+    integer*4 :: l1,l2
+    
+    real*8,    device :: zau(*),zu(*)
+    real*8,    dimension(:),device :: a1,a2,a3
+    integer*4 :: nd,nlf,n_low,n_dense
+    integer*4 :: istat
+    type(dim3) :: dimGrid, dimBlock, dimGrid2, dimBlock2
+    real*8 , dimension(:),allocatable :: zbu_tmp_cpu
+    real*8 :: t1,t2,t3
+    integer*4, dimension(:),allocatable :: i_tmp_cpu
+    integer*4 :: i
+    integer*4,save :: count
+
+    logical  ,save :: flag = .true.
+    integer*4,save,pointer :: lpmd(:),lnp(:),lsp(:),lthr(:)
+    integer*4,save :: la1,la2,la3,kmax,lent,lenl,lenkt,lend
+    integer*4,save :: mpinr,mpilog,nrank,icomm,ndnr_s,ndnr_e,ndnr,wwsize,ncdp,ncsp
+    integer*4 :: ic,ierr
+    integer*4 :: ISTATUS(MPI_STATUS_SIZE)
+    integer*4,dimension(:,:),allocatable,save :: sta1
+    integer*4,dimension(:),allocatable,save :: req1
+    real*8,dimension(:),allocatable :: r_tmp_cpu
+
+    if(flag) then
+       la1  = size(a1); la2 = size(a2); la3 = size(a3)
+       kmax = size(idxp1,1)
+       lent = size(subidt,1)
+       lenl = size(subidl,1)
+       lenkt= size(zbu_tmp)
+       lend = size(subidd,1)
+
+       ! print *, la3, la3*8.0d0/1000000000.0d0
+       ! allocate(i_tmp_cpu(n_dense))
+       ! i_tmp_cpu(1:n_dense) = ndlp(n_low+1:n_low+n_dense)
+       ! print *, "min,max,ave", minval(i_tmp_cpu),maxval(i_tmp_cpu),sum(i_tmp_cpu)/n_dense
+       ! print *, "lent,lenl,lend", lent,lenl,lend,n_low,n_dense
+       ! deallocate(i_tmp_cpu)
+
+       lpmd => st_ctl%lpmd(:); lnp(0:) => st_ctl%lnp; lsp(0:) => st_ctl%lsp;lthr(0:) => st_ctl%lthr
+       mpinr=lpmd(3); mpilog=lpmd(4); nrank=lpmd(2); icomm=lpmd(1)
+       ndnr_s=lpmd(6); ndnr_e=lpmd(7); ndnr=lpmd(5)
+
+       flag = .false.
+    endif
+    allocate(sta1(MPI_STATUS_SIZE,2*(nrank-1)))
+    allocate(req1(2*(nrank-1)))
+
+    dimGrid  = dim3((lenkt-1)/64+1, 1, 1)
+    dimBlock = dim3(64, 1, 1)
+    call array_init_kernel_double<<<dimGrid,dimBlock,0,stream1>>>   &
+         (zbu_tmp,0.0d0,lenkt)
+
+    dimGrid  = dim3((nd-1)/64+1, 1, 1)
+    dimBlock = dim3(64, 1, 1)
+    call array_init_kernel_double<<<dimGrid,dimBlock,0,stream1>>>   &
+         (zau,0.0d0,nd)
+
+    dimGrid  = dim3(lent, 1, 1)
+    dimBlock = dim3(BLOCKDIMX, 1, 1)
+    call HACApK_adot_body_lfmtx_cuda_low_balanced_col3<<<dimGrid,dimBlock,0,stream1>>>         &
+         (zbu_tmp,zu,subidt,ndtp,nstrttp,ktp,a1,idxp1,kt_prefix,nd,nlf,n_low,la1,kmax,lent,lenkt)
+
+    dimGrid  = dim3(lenl, 1, 1)
+    dimBlock = dim3(BLOCKDIMX, 1, 1)
+    call HACApK_adot_body_lfmtx_cuda_low_balanced_row<<<dimGrid,dimBlock,0,stream1>>>         &
+         (zau,zbu_tmp,subidl,ndlp,nstrtlp,ktp,a2,idxp2,kt_prefix,nd,nlf,n_low,la2,kmax,lenl,lenkt)
+
+    dimGrid2  = dim3((lend-1)/64+1, 1, 1)
+    dimBlock2 = dim3(64, 1, 1)
+
+    call HACApK_adot_body_lfmtx_cuda_dense_balanced_rowmajor<<<dimGrid2,dimBlock2,0,stream1>>>         &
+         (zau,zu,subidd,ndtp,nstrttp,ndlp,nstrtlp,a3,idxp3,nd,nlf,n_low,n_dense,la3,lend)
+    
+    if(nrank>1)then
+#if 1
+       do ic = 1, nrank-1
+          ncsp=mod(mpinr+nrank-ic,nrank)
+          call MPI_IRECV(ww(1,ncsp),isrct(1,ncsp),MPI_DOUBLE_PRECISION,ncsp,1,icomm,req1(nrank-1+ic),ierr)
+       end do
+
+       istat = cudaDeviceSynchronize()
+       ww(1:lnp(mpinr),mpinr)=zau(lsp(mpinr):lsp(mpinr)+lnp(mpinr)-1)
+
+       do ic = 1, nrank-1
+          ncdp=mod(mpinr+ic,nrank)
+          call MPI_ISEND(ww(1,mpinr),isrct(1,mpinr),MPI_DOUBLE_PRECISION,ncdp,1,icomm,req1(ic),ierr)
+       end do
+
+!       print *, __LINE__, mpinr
+       call MPI_WAITALL(2*(nrank-1),req1,sta1,ierr)
+
+       do ic = 0, nrank-1
+          istat = cudaMemcpyAsync(ww_d(1,ic), ww(1,ic), isrct(1,ic),cudaMemcpyHostToDevice,stream1)
+       end do
+#else
+       do ic = 1, nrank-1
+          ncsp=mod(mpinr+nrank-ic,nrank)
+          call MPI_IRECV(ww_d(1,ncsp),isrct(1,ncsp),MPI_DOUBLE_PRECISION,ncsp,1,icomm,req1(nrank-1+ic),ierr)
+       end do
+
+       istat = cudaDeviceSynchronize()
+       istat = cudaMemcpy(ww_d(1,mpinr),zau(lsp(mpinr)),lnp(mpinr),cudaMemcpyDeviceToDevice)
+
+       do ic = 1, nrank-1
+          ncdp=mod(mpinr+ic,nrank)
+          call MPI_ISEND(ww_d(1,mpinr),isrct(1,mpinr),MPI_DOUBLE_PRECISION,ncdp,1,icomm,req1(ic),ierr)
+       end do
+
+!       print *, __LINE__, mpinr
+       call MPI_WAITALL(2*(nrank-1),req1,sta1,ierr)
+
+#endif
+
+       !       allocate(r_tmp_cpu(nd))
+       ! r_tmp_cpu(1:nd) = zau(1:nd)
+       ! if(mpinr == 1) print *, sum(r_tmp_cpu),minval(r_tmp_cpu),maxval(r_tmp_cpu)
+
+       ! dimGrid  = dim3((size(ww,1)-1)/64+1, 1, 1)
+       ! dimBlock = dim3(64, 1, 1)
+       ! call zau_recv2D<<<dimGrid,dimBlock,0,stream1>>>(zau,ww_d,isrct_d,size(ww,1),nrank,nd,mpinr)
+
+       do ic = 1, nrank-1
+          ncsp=mod(mpinr+nrank-ic,nrank)
+          dimGrid  = dim3((isrct(1,ncsp)-1)/64+1, 1, 1)
+          dimBlock = dim3(64, 1, 1)
+          call zau_recv<<<dimGrid,dimBlock,0,stream1>>>(zau,ww_d(:,ncsp),isrct(2,ncsp),isrct(1,ncsp),nd)
+       end do
+
+!       r_tmp_cpu(1:nd) = zau(1:nd)
+!       if(mpinr == 3) print *, sum(r_tmp_cpu),minval(r_tmp_cpu),maxval(r_tmp_cpu)
+!       print *, mpinr, sum(r_tmp_cpu)
+!       print *, mpinr, sum(isrct(1,:))
+       ! do ic = 0, nrank-1
+       !    if((mpinr .ne. ic)) then
+       !       r_tmp_cpu(isrct(2,ic):isrct(2,ic)+isrct(1,ic)-1) = r_tmp_cpu(isrct(2,ic):isrct(2,ic)+isrct(1,ic)-1) + ww(1:isrct(1,ic),ic)
+       !    end if
+       ! end do
+       ! zau(1:nd) = r_tmp_cpu(1:nd)
+       ! print *, mpinr, sum(r_tmp_cpu)
+       ! if(count == 1) stop
+       ! count = count+1
+       ! deallocate(r_tmp_cpu)
+    endif
+    deallocate(sta1)
+    deallocate(req1)
+!    istat = cudaDeviceSynchronize()
+  end subroutine HACApK_adot_body_lfmtx_cuda_wrapper4
+
+
+  attributes(global) subroutine dcopy(dis,src,length)
+    real*8,dimension(length):: src,dis
+    integer*4,value :: length
+    integer*4 :: tid
+    tid = blockDim%x * (blockIdx%x-1) + threadIdx%x
+    if(tid > length) return
+    dis(tid) = src(tid)
+  end subroutine dcopy
+
+  attributes(global) subroutine zau_send(wws,zau,strt,length,nd)
+    real*8,dimension(length):: wws
+    real*8,dimension(nd):: zau
+    integer*4,value :: strt,length,nd
+    integer*4 :: tid
+    tid = blockDim%x * (blockIdx%x-1) + threadIdx%x
+    if(tid > length) return
+    wws(tid) = zau(strt+tid-1)
+  end subroutine zau_send
+
+  attributes(global) subroutine zau_recv(zau,wwr,strt,length,nd)
+    real*8,dimension(nd):: zau
+    real*8,dimension(length):: wwr
+    integer*4,value :: strt,length,nd
+    integer*4 :: tid
+    tid = blockDim%x * (blockIdx%x-1) + threadIdx%x
+    if(tid > length) return
+    zau(strt+tid-1) = zau(strt+tid-1) + wwr(tid)
+  end subroutine zau_recv
+
+  ! attributes(global) subroutine zau_recv2D(zau,ww,isrct,length,nrank,nd,mpinr)
+  !   real*8,dimension(nd):: zau
+  !   real*8,dimension(length,nrank):: ww
+  !   integer*4,dimension(2,nrank):: isrct
+  !   integer*4,value :: length,nrank,nd,mpinr
+  !   integer*4 :: tid,ty,dimy,ic,ncsp
+  !   tid = blockDim%x * (blockIdx%x-1) + threadIdx%x
+  !   ! ty = threadIdx%y
+  !   ! dimy = blockDim%y
+  !   ! if(tid > length) return
+  !   ! do ic = ty-1,nrank-1,dimy
+  !   !    if((ic .ne. myrank) .and. (tid <= isrct(1,ic))) then
+  !   !       zau(isrct(2,ic)+tid-1) = zau(isrct(2,ic)+tid-1) + ww(tid,ic)
+  !   !    end if
+  !   ! end do
+
+  !   do ic = 1, nrank-1
+  !      ncsp=mod(mpinr+nrank-ic,nrank)
+  !      if(tid <= isrct(1,ncsp+1)) then
+  !         zau(isrct(2,ncsp+1)+tid-1) = zau(isrct(2,ncsp+1)+tid-1) + ww(tid,ncsp+1)
+  !      end if
+  !   end do
+
+  ! end subroutine zau_recv2D
+
+  attributes(global) subroutine zau_recv2D(zau,ww,isrct,length,nrank,nd,mpinr)
+    real*8,dimension(nd):: zau
+    real*8,dimension(length,0:nrank-1):: ww
+    integer*4,dimension(2,0:nrank-1):: isrct
+    integer*4,value :: length,nrank,nd,mpinr
+    integer*4 :: tid,ty,dimy,ic,ncsp,istat
+    tid = blockDim%x * (blockIdx%x-1) + threadIdx%x
+    ! ty = threadIdx%y
+    ! dimy = blockDim%y
+    ! if(tid > length) return
+    ! do ic = ty-1,nrank-1,dimy
+    !    if((ic .ne. myrank) .and. (tid <= isrct(1,ic))) then
+    !       zau(isrct(2,ic)+tid-1) = zau(isrct(2,ic)+tid-1) + ww(tid,ic)
+    !    end if
+    ! end do
+
+    do ic = 1, nrank-1
+       ncsp=mod(mpinr+nrank-ic,nrank)
+       if(tid <= isrct(1,ncsp+1)) then
+          istat = atomicadd(zau(isrct(2,ncsp+1)+tid-1),ww(tid,ncsp+1))
+       end if
+    end do
+
+  end subroutine zau_recv2D
+
+  attributes(global) subroutine zp_zkp_kernel(zp,zkp,zr,zakp,beta,zeta,nd)
+    real*8,dimension(nd):: zp,zkp,zr,zakp
+!    real*8 :: beta,zeta
+    real*8,dimension(1) :: beta,zeta
+    integer*4,value :: nd
+    integer*4 :: tid
+    real*8 :: dtmp
+    tid = blockDim%x * (blockIdx%x-1) + threadIdx%x
+    if(tid > nd) return
+!    dtmp =zr(tid)+beta*(zp(tid)-zeta*zakp(tid))
+    dtmp =zr(tid)+beta(1)*(zp(tid)-zeta(1)*zakp(tid))
+    zp(tid)=dtmp
+    zkp(tid)=dtmp
+  end subroutine zp_zkp_kernel
+
+  subroutine zp_zkp_cuda                                 &
+    (zp,zkp,zr,zakp,beta,zeta,nd,stream1)
+    real*8,dimension(:),device :: zp,zkp,zr,zakp
+!    real*8,device :: beta,zeta
+    real*8,dimension(1),device :: beta,zeta
+    integer*4 :: nd
+    integer(kind=cuda_stream_kind) :: stream1
+    integer*4 :: istat
+    type(dim3):: dimGrid, dimBlock
+    real*8,dimension(:),allocatable :: tmp1D
+
+    dimGrid  = dim3((nd-1)/64+1, 1, 1)
+    dimBlock = dim3(64, 1, 1)
+    call zp_zkp_kernel<<<dimGrid,dimBlock,0,stream1>>>   &
+         (zp,zkp,zr,zakp,beta,zeta,nd)
+
+
+  end subroutine zp_zkp_cuda
+
+  attributes(global) subroutine array_init_kernel_double(dis,val,length)
+    real*8, dimension(length) :: dis
+    real*8, value :: val
+    integer*4,value :: length
+    integer*4 :: tid
+    tid = blockDim%x * (blockIdx%x-1) + threadIdx%x
+    if(tid > length) return
+    dis(tid) = val
+  end subroutine array_init_kernel_double
+
+  subroutine cuda_array_init_double(dis,val,stream1)
+    real*8, dimension(:), device :: dis
+    real*8 :: val
+    integer(kind=cuda_stream_kind) :: stream1
+    integer*4 :: length
+    type(dim3):: dimGrid, dimBlock
+
+    length = size(dis)
+    dimGrid  = dim3((length-1)/64+1, 1, 1)
+    dimBlock = dim3(64, 1, 1)
+    call array_init_kernel_double<<<dimGrid,dimBlock,0,stream1>>>   &
+         (dis,val,length)
+
+  end subroutine cuda_array_init_double
+
+  attributes(global) subroutine dotp_d_cuda_kernel_pre(tmp,a1,a2,lt,la)
+    real*8, dimension(lt) :: tmp
+    real*8, dimension(la) :: a1,a2
+    integer*4,value :: lt,la
+    integer*4 :: tid,tx,bx,bdim,i
+    real*8 :: dtmp
+    real*8, dimension(16), shared :: dshared
+    tx = threadIdx%x
+    bx = blockIdx%x
+    bdim = blockDim%x
+    tid = bdim * (bx-1) + tx
+    dtmp = 0.0d0
+    if(tid > la) then
+       dtmp = 0.0d0
+    else
+       dtmp = a1(tid) * a2(tid)
+    endif
+    dtmp = dtmp + __shfl_xor(dtmp,16)
+    dtmp = dtmp + __shfl_xor(dtmp,8)
+    dtmp = dtmp + __shfl_xor(dtmp,4)
+    dtmp = dtmp + __shfl_xor(dtmp,2)
+    dtmp = dtmp + __shfl_xor(dtmp,1)
+    call syncthreads()
+    if(mod(tx,32) == 1) dshared(tx/32+1) = dtmp
+    call syncthreads()
+    if(tx == 1) then
+       do i = 2, bdim/32
+          dtmp = dtmp + dshared(i)
+       end do
+       tmp(bx) = dtmp
+    end if
+
+  end subroutine dotp_d_cuda_kernel_pre
+
+  attributes(global) subroutine dotp_d_cuda_kernel_post(ans,tmp,lt)
+!    real*8 :: ans
+    real*8, dimension(1) :: ans
+    real*8, dimension(lt) :: tmp
+    integer*4,value :: lt
+    integer*4 :: tid,tx,bx,bdim,i
+    real*8 :: dtmp
+    real*8, dimension(16), shared :: dshared
+    tx = threadIdx%x
+    bdim = blockDim%x
+    dtmp = 0.0d0
+    do i = tx, lt, bdim 
+       dtmp = dtmp + tmp(i)
+    end do
+    dtmp = dtmp + __shfl_xor(dtmp,16)
+    dtmp = dtmp + __shfl_xor(dtmp,8)
+    dtmp = dtmp + __shfl_xor(dtmp,4)
+    dtmp = dtmp + __shfl_xor(dtmp,2)
+    dtmp = dtmp + __shfl_xor(dtmp,1)
+    call syncthreads()
+    if(mod(tx,32) == 1) dshared(tx/32+1) = dtmp
+    call syncthreads()
+    if(tx == 1) then
+       do i = 2, bdim/32
+          dtmp = dtmp + dshared(i)
+       end do
+!       ans = dtmp
+       ans(1) = dtmp
+    end if
+
+  end subroutine dotp_d_cuda_kernel_post
+
+  attributes(global) subroutine set_alpha(alpha,znom,zden,znomold)
+!    real*8 :: alpha,znom,zden,znomold
+    real*8,dimension(1) :: alpha,znom,zden,znomold
+    ! alpha = znom/zden
+    ! znomold = znom
+    alpha(1) = znom(1)/zden(1)
+    znomold(1) = znom(1)
+  end subroutine set_alpha
+
+  attributes(global) subroutine set_zeta(zeta,znom,zden)
+!    real*8 :: zeta,znom,zden
+    real*8,dimension(1) :: zeta,znom,zden
+!    zeta = znom/zden
+    zeta(1) = znom(1)/zden(1)
+  end subroutine set_zeta
+
+  attributes(global) subroutine set_beta(beta,alpha,zeta,znom,znomold)
+!    real*8 :: beta,alpha,zeta,znom,znomold
+    real*8,dimension(1) :: beta,alpha,zeta,znom,znomold
+!    beta = alpha/zeta*znom/znomold
+    beta(1) = alpha(1)/zeta(1)*znom(1)/znomold(1)
+  end subroutine set_beta
+
+  attributes(global) subroutine zt_zkt_kernel(zt,zkt,zr,zakp,alpha,nd)
+    real*8,dimension(nd):: zt,zkt,zr,zakp
+!    real*8 :: alpha
+    real*8,dimension(1) :: alpha
+    integer*4,value :: nd
+    integer*4 :: tid
+    real*8 :: dtmp
+    tid = blockDim%x * (blockIdx%x-1) + threadIdx%x
+    if(tid > nd) return
+!    dtmp =zr(tid)-alpha*zakp(tid)
+    dtmp =zr(tid)-alpha(1)*zakp(tid)
+    zt(tid)=dtmp
+    zkt(tid)=dtmp
+  end subroutine zt_zkt_kernel
+
+  attributes(global) subroutine u_zr_kernel(u,zr,zkp,zkt,zt,zakt,alpha,zeta,nd)
+    real*8,dimension(nd):: u,zr,zkp,zkt,zt,zakt
+!    real*8 :: alpha,zeta
+    real*8,dimension(1) :: alpha,zeta
+    integer*4,value :: nd
+    integer*4 :: tid
+    real*8 :: dtmp
+    tid = blockDim%x * (blockIdx%x-1) + threadIdx%x
+    if(tid > nd) return
+    ! u(tid) = u(tid)+alpha*zkp(tid)+zeta*zkt(tid)
+    ! zr(tid)= zt(tid)-zeta*zakt(tid)
+    u(tid) = u(tid)+alpha(1)*zkp(tid)+zeta(1)*zkt(tid)
+    zr(tid)= zt(tid)-zeta(1)*zakt(tid)
+  end subroutine u_zr_kernel
+
+  subroutine zt_zkt_cuda                                 &
+    (zt,zkt,zr,zakp,zshdw,nd,znomold,alpha,znom_tmp,zden_tmp,stream1)
+    real*8,dimension(:),device :: zt,zkt,zr,zakp,zshdw,znom_tmp,zden_tmp
+!    real*8, device :: alpha, znomold
+    real*8,dimension(1),device :: alpha, znomold
+    integer*4 :: nd
+!    real*8,device :: znom, zden
+    real*8,dimension(1),device :: znom, zden
+    integer(kind=cuda_stream_kind) :: stream1
+    type(dim3):: dimGrid, dimBlock
+    integer*4 :: ltmp
+    ! real*8 :: tmp
+    ! real*8,dimension(:),allocatable :: tmp1D
+
+    ! allocate(tmp1D(nd))
+    ! tmp1D(1:nd) = zr(1:nd)
+    ! print *, "sum zr", sum(tmp1D(1:nd))
+    ! tmp1D(1:nd) = zakp(1:nd)
+    ! print *, "sum zakp", sum(tmp1D(1:nd))
+
+    ! stop
+
+    ltmp = (nd-1)/128+1
+    dimGrid  = dim3(ltmp, 1, 1)
+    dimBlock = dim3(128, 1, 1)
+    call dotp_d_cuda_kernel_pre<<<dimGrid,dimBlock,0,stream1>>>   &
+         (znom_tmp,zshdw,zr,ltmp,nd)
+    call dotp_d_cuda_kernel_pre<<<dimGrid,dimBlock,0,stream1>>>   &
+         (zden_tmp,zshdw,zakp,ltmp,nd)
+    dimGrid  = dim3(1, 1, 1)
+    dimBlock = dim3(256, 1, 1)
+    call dotp_d_cuda_kernel_post<<<dimGrid,dimBlock,0,stream1>>>   &
+         (znom,znom_tmp,ltmp)
+    call dotp_d_cuda_kernel_post<<<dimGrid,dimBlock,0,stream1>>>   &
+         (zden,zden_tmp,ltmp)
+    dimGrid  = dim3(1, 1, 1)
+    dimBlock = dim3(1, 1, 1)
+    call set_alpha<<<dimGrid,dimBlock,0,stream1>>>   &
+         (alpha,znom,zden,znomold)
+    ! tmp = alpha(1)
+    ! print *, "alpha", tmp
+    dimGrid  = dim3(ltmp, 1, 1)
+    dimBlock = dim3(128, 1, 1)
+    call zt_zkt_kernel<<<dimGrid,dimBlock,0,stream1>>>   &
+         (zt,zkt,zr,zakp,alpha,nd)
+
+  end subroutine zt_zkt_cuda
+
+!   subroutine zt_zkt_cuda2                                 &
+!     (zt,zkt,zr,zakp,zshdw,nd,znomold,alpha,znom_tmp,zden_tmp,stream1)
+!     real*8,dimension(:),device :: zt,zkt,zr,zakp,zshdw,znom_tmp,zden_tmp
+! !    real*8, device :: alpha, znomold
+!     real*8,dimension(1),device :: alpha, znomold
+!     integer*4 :: nd
+! !    real*8,device :: znom, zden
+!     real*8,dimension(1),device :: znom, zden
+!     integer(kind=cuda_stream_kind) :: stream1
+!     type(dim3):: dimGrid, dimBlock
+!     integer*4 :: ltmp,ierr
+!     real*8 :: allred_s(2), allred_r(2)
+!     ! real*8 :: tmp
+!     ! real*8,dimension(:),allocatable :: tmp1D
+
+!     ! allocate(tmp1D(nd))
+!     ! tmp1D(1:nd) = zr(1:nd)
+!     ! print *, "sum zr", sum(tmp1D(1:nd))
+!     ! tmp1D(1:nd) = zakp(1:nd)
+!     ! print *, "sum zakp", sum(tmp1D(1:nd))
+
+!     ! stop
+
+!     ltmp = (nd-1)/128+1
+!     dimGrid  = dim3(ltmp, 1, 1)
+!     dimBlock = dim3(128, 1, 1)
+!     call dotp_d_cuda_kernel_pre<<<dimGrid,dimBlock,0,stream1>>>   &
+!          (znom_tmp,zshdw,zr,ltmp,nd)
+!     call dotp_d_cuda_kernel_pre<<<dimGrid,dimBlock,0,stream1>>>   &
+!          (zden_tmp,zshdw,zakp,ltmp,nd)
+!     dimGrid  = dim3(1, 1, 1)
+!     dimBlock = dim3(256, 1, 1)
+!     call dotp_d_cuda_kernel_post<<<dimGrid,dimBlock,0,stream1>>>   &
+!          (znom,znom_tmp,ltmp)
+!     call dotp_d_cuda_kernel_post<<<dimGrid,dimBlock,0,stream1>>>   &
+!          (zden,zden_tmp,ltmp)
+
+!     allred_s(1) = znom
+!     allred_s(2) = zden
+!     call MPI_Allreduce (allred_s, allred_r, 2, MPI_DOUBLE_PRECISION,         &
+!          &                    MPI_SUM, MPI_COMM_WORLD, ierr)
+!     znom = allred_r(1)
+!     zden = allred_r(2)
+
+!     dimGrid  = dim3(ltmp, 1, 1)
+!     dimBlock = dim3(128, 1, 1)
+!     call zt_zkt_kernel<<<dimGrid,dimBlock,0,stream1>>>   &
+!          (zt,zkt,zr,zakp,alpha,nd)
+
+!   end subroutine zt_zkt_cuda2
+
+
+  subroutine u_zr_cuda                                 &
+    (u,zr,zkp,zkt,zt,zakt,zshdw,alpha,beta,zeta,znomold,zrnorm,nd,znom_tmp,zden_tmp,stream1)
+    real*8,dimension(:),device :: u,zr,zkp,zkt,zt,zakt,zshdw,znom_tmp,zden_tmp
+!    real*8, device :: alpha,beta,zeta,znomold
+    real*8,dimension(1),device :: alpha,beta,zeta,znomold
+    real*8 :: zrnorm
+    integer*4 :: nd
+    integer(kind=cuda_stream_kind) :: stream1
+!    real*8, device :: znom, zden
+    real*8,dimension(1),device :: znom, zden
+    type(dim3):: dimGrid, dimBlock
+    integer*4 :: ltmp,istat
+    ! real*8 :: tmp
+    ! real*8,dimension(:),allocatable :: tmp1D
+
+    ! stop
+    
+    ltmp = (nd-1)/128+1
+    dimGrid  = dim3(ltmp, 1, 1)
+    dimBlock = dim3(128, 1, 1)
+    call dotp_d_cuda_kernel_pre<<<dimGrid,dimBlock,0,stream1>>>   &
+         (znom_tmp,zakt,zt,ltmp,nd)
+    call dotp_d_cuda_kernel_pre<<<dimGrid,dimBlock,0,stream1>>>   &
+         (zden_tmp,zakt,zakt,ltmp,nd)
+    dimGrid  = dim3(1, 1, 1)
+    dimBlock = dim3(256, 1, 1)
+    call dotp_d_cuda_kernel_post<<<dimGrid,dimBlock,0,stream1>>>   &
+         (znom,znom_tmp,ltmp)
+    call dotp_d_cuda_kernel_post<<<dimGrid,dimBlock,0,stream1>>>   &
+         (zden,zden_tmp,ltmp)
+    dimGrid  = dim3(1, 1, 1)
+    dimBlock = dim3(1, 1, 1)
+    call set_zeta<<<dimGrid,dimBlock,0,stream1>>>   &
+         (zeta,znom,zden)
+    ! tmp = zeta(1)
+    ! print *, "zeta", tmp
+    dimGrid  = dim3(ltmp, 1, 1)
+    dimBlock = dim3(128, 1, 1)
+    call u_zr_kernel<<<dimGrid,dimBlock,0,stream1>>>   &
+         (u,zr,zkp,zkt,zt,zakt,alpha,zeta,nd)
+    dimGrid  = dim3(ltmp, 1, 1)
+    dimBlock = dim3(128, 1, 1)
+    call dotp_d_cuda_kernel_pre<<<dimGrid,dimBlock,0,stream1>>>   &
+         (znom_tmp,zshdw,zr,ltmp,nd)
+    dimGrid  = dim3(1, 1, 1)
+    dimBlock = dim3(256, 1, 1)
+    call dotp_d_cuda_kernel_post<<<dimGrid,dimBlock,0,stream1>>>   &
+         (znom,znom_tmp,ltmp)
+    dimGrid  = dim3(1, 1, 1)
+    dimBlock = dim3(1, 1, 1)
+    call set_beta<<<dimGrid,dimBlock,0,stream1>>>   &
+         (beta,alpha,zeta,znom,znomold)
+    ! tmp = beta(1)
+    ! print *, "beta", tmp
+    ! tmp = alpha(1)
+    ! print *, "alpha", tmp
+    ! tmp = zeta(1)
+    ! print *, "zeta", tmp
+    ! tmp = znom(1)
+    ! print *, "znom", tmp
+    ! tmp = znomold(1)
+    ! print *, "znomold", tmp
+    ! allocate(tmp1D(nd))
+    ! tmp1D(1:nd) = zshdw(1:nd)
+    ! print *, "sum zshdw", sum(tmp1D(1:nd))
+    ! tmp1D(1:nd) = zr(1:nd)
+    ! print *, "sum zr", sum(tmp1D(1:nd))
+    ! stop
+    dimGrid  = dim3(ltmp, 1, 1)
+    dimBlock = dim3(128, 1, 1)
+    call dotp_d_cuda_kernel_pre<<<dimGrid,dimBlock,0,stream1>>>   &
+         (znom_tmp,zr,zr,ltmp,nd)
+    dimGrid  = dim3(1, 1, 1)
+    dimBlock = dim3(256, 1, 1)
+    call dotp_d_cuda_kernel_post<<<dimGrid,dimBlock,0,stream1>>>   &
+         (znom,znom_tmp,ltmp)
+    istat = cudaDeviceSynchronize()
+    zrnorm = znom(1)
+    zrnorm = dsqrt(zrnorm)
+  end subroutine u_zr_cuda
+
+end module m_HACApK_solve_cuda
